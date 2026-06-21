@@ -1,0 +1,9 @@
+{
+  "name": "com.toolbox.updater",
+  "description": "插件工作箱 — 自动更新 Native Host",
+  "path": "D:\\Claw\\浏览器插件管理\\native-host\\toolbox-updater.exe",
+  "type": "stdio",
+  "allowed_origins": [
+    "chrome-extension://nmpdifejooglhkcilhgjkhggbioalojk/"
+  ]
+}

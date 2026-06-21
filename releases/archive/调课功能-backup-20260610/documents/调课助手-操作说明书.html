@@ -1,0 +1,854 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>调课助手 - 操作说明书</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+      background: #f0f2f5;
+      color: #1a1a2e;
+      line-height: 1.8;
+      padding: 0;
+    }
+
+    .page {
+      max-width: 800px;
+      margin: 0 auto;
+      background: #fff;
+      min-height: 100vh;
+    }
+
+    /* ===== 封面 ===== */
+    .cover {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: #fff;
+      padding: 60px 40px 50px;
+      text-align: center;
+    }
+
+    .cover-icon {
+      font-size: 64px;
+      margin-bottom: 16px;
+    }
+
+    .cover h1 {
+      font-size: 36px;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+
+    .cover .subtitle {
+      font-size: 18px;
+      opacity: 0.9;
+      margin-bottom: 24px;
+    }
+
+    .cover .badge {
+      display: inline-block;
+      background: rgba(255,255,255,0.2);
+      border: 1px solid rgba(255,255,255,0.4);
+      border-radius: 20px;
+      padding: 6px 20px;
+      font-size: 14px;
+    }
+
+    /* ===== 目录 ===== */
+    .toc {
+      padding: 30px 40px;
+      background: #fafbfc;
+      border-bottom: 1px solid #eee;
+    }
+
+    .toc h2 {
+      font-size: 20px;
+      margin-bottom: 16px;
+      color: #333;
+    }
+
+    .toc-list {
+      list-style: none;
+      counter-reset: toc-counter;
+    }
+
+    .toc-list li {
+      counter-increment: toc-counter;
+      padding: 10px 0;
+      border-bottom: 1px dashed #e8e8e8;
+      font-size: 16px;
+    }
+
+    .toc-list li::before {
+      content: counter(toc-counter) ".";
+      font-weight: 700;
+      color: #667eea;
+      margin-right: 10px;
+    }
+
+    .toc-list li:last-child {
+      border-bottom: none;
+    }
+
+    /* ===== 章节 ===== */
+    .section {
+      padding: 30px 40px;
+      border-bottom: 1px solid #f0f0f0;
+    }
+
+    .section:last-child {
+      border-bottom: none;
+    }
+
+    .section-number {
+      display: inline-block;
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      color: #fff;
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      text-align: center;
+      line-height: 32px;
+      font-size: 16px;
+      font-weight: 700;
+      margin-right: 12px;
+      vertical-align: middle;
+    }
+
+    .section h2 {
+      font-size: 22px;
+      color: #1a1a2e;
+      display: inline;
+      vertical-align: middle;
+    }
+
+    .section h3 {
+      font-size: 18px;
+      color: #333;
+      margin: 24px 0 12px;
+      padding-left: 14px;
+      border-left: 4px solid #667eea;
+    }
+
+    .section p {
+      margin: 12px 0;
+      font-size: 15px;
+      color: #444;
+    }
+
+    /* ===== 步骤 ===== */
+    .steps {
+      margin: 20px 0;
+      padding: 0;
+      list-style: none;
+      counter-reset: step-counter;
+    }
+
+    .steps li {
+      counter-increment: step-counter;
+      position: relative;
+      padding: 14px 14px 14px 60px;
+      margin-bottom: 12px;
+      background: #f8f9ff;
+      border-radius: 10px;
+      border-left: 3px solid #667eea;
+      font-size: 15px;
+    }
+
+    .steps li::before {
+      content: counter(step-counter);
+      position: absolute;
+      left: 14px;
+      top: 14px;
+      background: #667eea;
+      color: #fff;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      text-align: center;
+      line-height: 28px;
+      font-size: 14px;
+      font-weight: 700;
+    }
+
+    .steps li strong {
+      color: #4a5568;
+    }
+
+    /* ===== 提示框 ===== */
+    .tip-box {
+      margin: 16px 0;
+      padding: 16px 20px;
+      border-radius: 10px;
+      font-size: 14px;
+      line-height: 1.7;
+    }
+
+    .tip-box.tip-info {
+      background: #eef2ff;
+      border-left: 4px solid #667eea;
+      color: #3b4a7a;
+    }
+
+    .tip-box.tip-success {
+      background: #ecfdf5;
+      border-left: 4px solid #48bb78;
+      color: #276749;
+    }
+
+    .tip-box.tip-warning {
+      background: #fffbeb;
+      border-left: 4px solid #f59e0b;
+      color: #92400e;
+    }
+
+    .tip-box.tip-danger {
+      background: #fef2f2;
+      border-left: 4px solid #ef4444;
+      color: #991b1b;
+    }
+
+    .tip-box .tip-title {
+      font-weight: 700;
+      margin-bottom: 4px;
+      font-size: 15px;
+    }
+
+    /* ===== 表格 ===== */
+    .format-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 16px 0;
+      font-size: 14px;
+    }
+
+    .format-table th {
+      background: #667eea;
+      color: #fff;
+      padding: 10px 14px;
+      text-align: left;
+      font-weight: 600;
+    }
+
+    .format-table td {
+      padding: 10px 14px;
+      border-bottom: 1px solid #eee;
+      color: #444;
+    }
+
+    .format-table tr:nth-child(even) td {
+      background: #fafbfc;
+    }
+
+    .format-table code {
+      background: #f0f2f5;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 13px;
+      color: #e53e3e;
+      font-family: "SF Mono", "Fira Code", Consolas, monospace;
+    }
+
+    /* ===== 示例框 ===== */
+    .example-box {
+      margin: 16px 0;
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      overflow: hidden;
+    }
+
+    .example-box .example-header {
+      background: #edf2f7;
+      padding: 8px 16px;
+      font-size: 13px;
+      font-weight: 600;
+      color: #718096;
+    }
+
+    .example-box pre {
+      padding: 16px;
+      font-size: 14px;
+      line-height: 1.7;
+      background: #1a1a2e;
+      color: #e2e8f0;
+      overflow-x: auto;
+      font-family: "SF Mono", "Fira Code", Consolas, monospace;
+    }
+
+    .example-box pre .comment {
+      color: #718096;
+    }
+
+    .example-box pre .highlight {
+      color: #68d391;
+    }
+
+    /* ===== 流程图 ===== */
+    .flow {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 0;
+      margin: 20px 0;
+    }
+
+    .flow-step {
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      color: #fff;
+      padding: 10px 18px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      text-align: center;
+      min-width: 100px;
+    }
+
+    .flow-arrow {
+      font-size: 22px;
+      color: #667eea;
+      margin: 0 8px;
+    }
+
+    /* ===== 对比卡片 ===== */
+    .compare-cards {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin: 16px 0;
+    }
+
+    .compare-card {
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      padding: 16px;
+    }
+
+    .compare-card h4 {
+      font-size: 15px;
+      margin-bottom: 8px;
+    }
+
+    .compare-card.card-a {
+      border-color: #667eea;
+      background: #f8f9ff;
+    }
+
+    .compare-card.card-a h4 {
+      color: #667eea;
+    }
+
+    .compare-card.card-b {
+      border-color: #48bb78;
+      background: #f0fff4;
+    }
+
+    .compare-card.card-b h4 {
+      color: #48bb78;
+    }
+
+    .compare-card p {
+      font-size: 13px;
+      margin: 6px 0;
+      color: #555;
+    }
+
+    /* ===== FAQ ===== */
+    .faq-item {
+      margin: 16px 0;
+      padding: 16px 20px;
+      background: #fafbfc;
+      border-radius: 10px;
+    }
+
+    .faq-q {
+      font-weight: 700;
+      color: #667eea;
+      margin-bottom: 6px;
+      font-size: 15px;
+    }
+
+    .faq-a {
+      color: #444;
+      font-size: 14px;
+    }
+
+    /* ===== 底部 ===== */
+    .footer {
+      text-align: center;
+      padding: 30px 40px;
+      background: #1a1a2e;
+      color: rgba(255,255,255,0.6);
+      font-size: 13px;
+    }
+
+    .footer p {
+      margin: 4px 0;
+      color: rgba(255,255,255,0.6);
+    }
+
+    /* ===== 打印适配 ===== */
+    @media print {
+      body { background: #fff; }
+      .page { box-shadow: none; }
+      .section { break-inside: avoid; }
+    }
+
+    /* ===== 小屏适配 ===== */
+    @media (max-width: 600px) {
+      .cover { padding: 40px 24px 30px; }
+      .cover h1 { font-size: 26px; }
+      .cover .subtitle { font-size: 15px; }
+      .section { padding: 24px 20px; }
+      .toc { padding: 20px; }
+      .compare-cards { grid-template-columns: 1fr; }
+      .flow { flex-direction: column; }
+      .flow-arrow { transform: rotate(90deg); margin: 4px 0; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+
+    <!-- 封面 -->
+    <div class="cover">
+      <div class="cover-icon">🎯</div>
+      <h1>调课助手</h1>
+      <p class="subtitle">操作说明书</p>
+      <div class="badge">手机端 · 网页版 · V4</div>
+    </div>
+
+    <!-- 目录 -->
+    <div class="toc">
+      <h2>📖 目录</h2>
+      <ol class="toc-list">
+        <li>调课助手是什么</li>
+        <li>使用前的准备</li>
+        <li>第一步：获取 Token（电脑端操作）</li>
+        <li>第二步：粘贴 Token 登录（手机端操作）</li>
+        <li>第三步：输入调课指令</li>
+        <li>第四步：解析与执行</li>
+        <li>输入格式详解</li>
+        <li>常见问题（FAQ）</li>
+      </ol>
+    </div>
+
+    <!-- 第1章：调课助手是什么 -->
+    <div class="section">
+      <span class="section-number">1</span>
+      <h2>调课助手是什么</h2>
+
+      <p>调课助手是一个帮你<strong>批量改约课程时间</strong>的工具。以前你需要在调课后台一个一个点、一个一个改，现在只需要把要改的信息输进去，一键就能全部搞定。</p>
+
+      <div class="flow">
+        <div class="flow-step">输入调课信息</div>
+        <span class="flow-arrow">→</span>
+        <div class="flow-step">一键解析</div>
+        <span class="flow-arrow">→</span>
+        <div class="flow-step">自动批量改约</div>
+      </div>
+
+      <div class="tip-box tip-info">
+        <div class="tip-title">💡 举个例子</div>
+        王一的第5讲要调到5月2日早上10点，你只需要输入：<br>
+        <code>王一，第5讲，调到5月2日早上10点</code><br>
+        工具会自动帮你完成改约，不用再去后台手动操作。
+      </div>
+    </div>
+
+    <!-- 第2章：使用前的准备 -->
+    <div class="section">
+      <span class="section-number">2</span>
+      <h2>使用前的准备</h2>
+
+      <p>你需要两样东西：</p>
+
+      <div class="compare-cards">
+        <div class="compare-card card-a">
+          <h4>💻 电脑（获取 Token 用）</h4>
+          <p>需要已经安装了调课助手浏览器扩展</p>
+          <p>需要已经登录了调课后台</p>
+          <p>（每天只需操作一次）</p>
+        </div>
+        <div class="compare-card card-b">
+          <h4>📱 手机（实际调课用）</h4>
+          <p>打开调课助手网页即可</p>
+          <p>可以用微信/企微里的链接直接打开</p>
+          <p>（不需要安装任何东西）</p>
+        </div>
+      </div>
+
+      <div class="tip-box tip-warning">
+        <div class="tip-title">⚠️ 注意</div>
+        Token 相当于你的登录凭证，<strong>有效期 24 小时</strong>。过期后需要重新从电脑端复制一次。建议每天上班第一件事先复制一下，当天就不用担心过期了。
+      </div>
+    </div>
+
+    <!-- 第3章：获取 Token -->
+    <div class="section">
+      <span class="section-number">3</span>
+      <h2>第一步：获取 Token（电脑端操作）</h2>
+
+      <p>Token 是一串以 <code>eyJ</code> 开头的长字符串，相当于你的"登录凭证"。有了它，手机端才能代替你在后台操作。</p>
+
+      <h3>操作步骤</h3>
+
+      <ol class="steps">
+        <li>在<strong>电脑</strong>浏览器上，打开调课后台网站（就是平时上课管理的那个网站），确保你已经<strong>登录</strong>了</li>
+        <li>点击浏览器右上角的<strong>调课助手扩展图标</strong>（📚 图标）</li>
+        <li>弹出窗口中，点击 <strong>🔑 Token</strong> 标签页</li>
+        <li>如果显示 <strong>✅ Token 有效</strong>，点击下方的 <strong>📋 复制 Token</strong> 按钮</li>
+        <li>打开<strong>企微或微信</strong>，把 Token 发给自己（发到文件传输助手也行）</li>
+      </ol>
+
+      <div class="tip-box tip-success">
+        <div class="tip-title">✅ 成功标志</div>
+        按钮变成 <strong>✅ 已复制！</strong> 就说明复制成功了。
+      </div>
+
+      <div class="tip-box tip-warning">
+        <div class="tip-title">⚠️ 如果显示"Token 已过期"</div>
+        需要先重新登录调课后台网站，登录后再回到扩展点<strong>🔄 刷新检测</strong>，看到 Token 有效后再复制。
+      </div>
+
+      <div class="tip-box tip-danger">
+        <div class="tip-title">🔒 安全提醒</div>
+        Token 就是你的登录凭证，<strong>不要发给别人</strong>！只发给你自己的企微/微信。用完之后聊天记录里的 Token 也可以删掉。
+      </div>
+    </div>
+
+    <!-- 第4章：粘贴 Token 登录 -->
+    <div class="section">
+      <span class="section-number">4</span>
+      <h2>第二步：粘贴 Token 登录（手机端操作）</h2>
+
+      <p>拿到 Token 后，在手机上完成登录。</p>
+
+      <h3>操作步骤</h3>
+
+      <ol class="steps">
+        <li>在手机上打开调课助手网页（从企微/微信里的链接进入，或者输入网址）</li>
+        <li>页面会显示 <strong>🎯 调课助手 — 粘贴 Token 即可使用</strong></li>
+        <li>在输入框里<strong>长按 → 粘贴</strong>你刚复制的 Token</li>
+        <li>粘贴后，页面会<strong>自动验证</strong>并跳转到调课页面</li>
+      </ol>
+
+      <div class="tip-box tip-success">
+        <div class="tip-title">✅ 成功标志</div>
+        页面跳转后，顶部显示 <strong>🔑 Token：✅</strong> 就说明登录成功了。
+      </div>
+
+      <div class="tip-box tip-warning">
+        <div class="tip-title">⚠️ 如果显示"Token 格式不正确"</div>
+        说明粘贴的内容不完整。Token 很长，确保整串都复制了，以 <code>eyJ</code> 开头，中间有两个 <code>.</code> 分隔。回到企微/微信，长按消息全选复制，再粘贴一次。
+      </div>
+
+      <div class="tip-box tip-warning">
+        <div class="tip-title">⚠️ 如果 Token 过期了</div>
+        顶部显示 <strong>🔑 Token：❌ 已过期</strong>，需要回到第3步重新从电脑复制。
+      </div>
+
+      <div class="tip-box tip-info">
+        <div class="tip-title">💡 另一种粘贴方式</div>
+        如果你的手机浏览器没自动跳转，也可以：<br>
+        1. 点击底部 <strong>「设置」</strong> 标签<br>
+        2. 找到 <strong>🔑 调课 Token</strong> 区域<br>
+        3. 点击 <strong>📋 粘贴</strong> 按钮或手动粘贴到输入框<br>
+        4. 点击 <strong>✅ 验证并保存</strong>
+      </div>
+    </div>
+
+    <!-- 第5章：输入调课指令 -->
+    <div class="section">
+      <span class="section-number">5</span>
+      <h2>第三步：输入调课指令</h2>
+
+      <p>登录成功后，在 <strong>「调课」</strong> 标签页的输入框中，输入你要调课的信息。支持两种写法，你习惯哪种就用哪种：</p>
+
+      <h3>写法一：自然语言（推荐，最简单）</h3>
+      <p>就像平时说话一样写，每行写一条：</p>
+
+      <div class="example-box">
+        <div class="example-header">📝 输入示例</div>
+        <pre><span class="comment">王一，第5讲，调到5月2日早上10点上课</span>
+<span class="comment">李二，第3讲，改到6月5号下午2点半</span>
+<span class="comment">张三，第8讲，调到5月10号晚上7点</span></pre>
+      </div>
+
+      <div class="tip-box tip-info">
+        <div class="tip-title">💡 自然语言的写法很灵活</div>
+        <strong>关键词：</strong>"第X讲" 必须有，日期和时间也必须有<br>
+        <strong>连接词：</strong>"调到" "改到" "约到" 都可以<br>
+        <strong>时间段：</strong>"早上" "上午" "下午" "晚上" 都支持<br>
+        <strong>时间写法：</strong>"10点" "10:00" "2点半" "14:30" 都行<br>
+        <strong>日期写法：</strong>"5月2日" "5月2号" "5-2" "2026-05-02" 都行
+      </div>
+
+      <h3>写法二：结构化（适合批量复制）</h3>
+      <p>每行四个信息，用空格或Tab隔开：</p>
+
+      <div class="example-box">
+        <div class="example-header">📝 输入示例（空格分隔）</div>
+        <pre><span class="comment">862719  11  5-27  10:00</span>
+<span class="comment">865432  5   6-1   14:00</span>
+<span class="comment">861234  3   5-30  9:00</span></pre>
+      </div>
+
+      <p>四个字段的意思是：</p>
+
+      <table class="format-table">
+        <thead>
+          <tr>
+            <th>第1列</th>
+            <th>第2列</th>
+            <th>第3列</th>
+            <th>第4列</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>学员ID</strong> 或 姓名</td>
+            <td><strong>第几讲</strong>（数字）</td>
+            <td><strong>新日期</strong></td>
+            <td><strong>新开始时间</strong></td>
+          </tr>
+          <tr>
+            <td><code>862719</code> 或 <code>王一</code></td>
+            <td><code>11</code></td>
+            <td><code>5-27</code></td>
+            <td><code>10:00</code></td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="tip-box tip-info">
+        <div class="tip-title">💡 用姓名代替学员ID</div>
+        如果你不记得学员ID，也可以直接输入<strong>姓名</strong>。但前提是先在「设置」页导入学情表（Excel文件），这样工具才能把姓名对应到学员ID。<br><br>
+        如果没导入学情表，就只能用<strong>学员ID</strong>（纯数字）。
+      </div>
+    </div>
+
+    <!-- 第6章：解析与执行 -->
+    <div class="section">
+      <span class="section-number">6</span>
+      <h2>第四步：解析与执行</h2>
+
+      <h3>6.1 先解析预览</h3>
+
+      <ol class="steps">
+        <li>输入调课指令后，点击 <strong>📋 解析预览</strong> 按钮</li>
+        <li>页面会显示解析结果，告诉你<strong>哪些能识别、哪些有问题</strong></li>
+        <li>检查一下，确认无误后进入下一步</li>
+      </ol>
+
+      <div class="tip-box tip-success">
+        <div class="tip-title">✅ 解析成功示例</div>
+        显示类似：<strong>共 3 条：✅ 3 条成功，❌ 0 条失败</strong><br>
+        每条下面显示：学员 → 第X讲 → 新日期 新时间
+      </div>
+
+      <div class="tip-box tip-warning">
+        <div class="tip-title">⚠️ 如果有解析失败的</div>
+        比如显示 <strong>❌ 未找到学员"某某"</strong>，说明姓名在学情表里没有匹配到。可以：<br>
+        1. 改用学员ID（纯数字）输入<br>
+        2. 检查姓名是否写错了
+      </div>
+
+      <h3>6.2 执行调课</h3>
+
+      <ol class="steps">
+        <li>确认解析结果无误后，点击 <strong>▶ 执行调课</strong> 按钮</li>
+        <li>等待执行完成（一般几秒钟就搞定了）</li>
+        <li>查看结果：<strong>✅ 成功</strong> 的表示调课已完成，<strong>❌ 失败</strong> 的会说明原因</li>
+      </ol>
+
+      <div class="tip-box tip-success">
+        <div class="tip-title">✅ 全部成功</div>
+        显示类似：<strong>共 3 条：✅ 3 条成功，❌ 0 条失败</strong><br>
+        调课完成！可以去调课后台刷新页面确认。
+      </div>
+
+      <div class="tip-box tip-warning">
+        <div class="tip-title">⚠️ 部分失败怎么办</div>
+        1. 查看失败原因（比如"未找到第X讲的课表记录"）<br>
+        2. 确认学员ID和第几讲是否正确<br>
+        3. 修正后重新输入，再次执行
+      </div>
+    </div>
+
+    <!-- 第7章：输入格式详解 -->
+    <div class="section">
+      <span class="section-number">7</span>
+      <h2>输入格式详解</h2>
+
+      <h3>7.1 日期支持的写法</h3>
+
+      <table class="format-table">
+        <thead>
+          <tr>
+            <th>写法</th>
+            <th>示例</th>
+            <th>说明</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>中文日期</td>
+            <td><code>5月2日</code> <code>5月2号</code></td>
+            <td>最常用，简单直观</td>
+          </tr>
+          <tr>
+            <td>短横线</td>
+            <td><code>5-2</code> <code>05-02</code></td>
+            <td>省略年份，自动用今年</td>
+          </tr>
+          <tr>
+            <td>斜杠</td>
+            <td><code>5/2</code> <code>05/02</code></td>
+            <td>省略年份，自动用今年</td>
+          </tr>
+          <tr>
+            <td>完整日期</td>
+            <td><code>2026-05-02</code></td>
+            <td>带年份的写法</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3>7.2 时间支持的写法</h3>
+
+      <table class="format-table">
+        <thead>
+          <tr>
+            <th>写法</th>
+            <th>示例</th>
+            <th>说明</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>标准时间</td>
+            <td><code>10:00</code> <code>14:30</code></td>
+            <td>最常用</td>
+          </tr>
+          <tr>
+            <td>中文"点"</td>
+            <td><code>10点</code> <code>下午2点</code></td>
+            <td>支持时间段词自动转换</td>
+          </tr>
+          <tr>
+            <td>"点半"</td>
+            <td><code>2点半</code> <code>下午2点半</code></td>
+            <td>自动转为 :30</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3>7.3 时间段自动转换</h3>
+
+      <div class="tip-box tip-info">
+        <div class="tip-title">💡 不用纠结12小时制还是24小时制</div>
+        当你写 <code>下午2点</code> 时，工具会自动转成 14:00<br>
+        当你写 <code>晚上7点</code> 时，工具会自动转成 19:00<br>
+        当你写 <code>上午10点</code> 时，就是 10:00，不会变<br>
+        如果你直接写 <code>14:00</code>，那工具直接用，不需要转换
+      </div>
+
+      <h3>7.4 课程时长</h3>
+
+      <div class="tip-box tip-info">
+        <div class="tip-title">💡 结束时间自动计算</div>
+        课程时长固定为 <strong>2 小时</strong>。你只需要输入开始时间，结束时间会自动计算。<br>
+        例如：开始时间 10:00 → 结束时间 12:00
+      </div>
+
+      <h3>7.5 更多输入示例</h3>
+
+      <div class="example-box">
+        <div class="example-header">📝 各种写法都行</div>
+        <pre><span class="comment">862719  11  5月27日  10:00</span>         <span class="comment">← 日期用中文写法</span>
+<span class="comment">862719  11  5-27  10:00</span>            <span class="comment">← 日期用短横线</span>
+<span class="comment">862719  11  2026-05-27  10:00</span>      <span class="comment">← 日期带年份</span>
+<span class="comment">王一，第11讲，调到5月27日10点</span>      <span class="comment">← 自然语言+姓名</span>
+<span class="comment">862719  11  5-27  下午2点</span>          <span class="comment">← 时间用中文</span>
+<span class="comment">把张三的第3讲改到6月1号上午9点</span>      <span class="comment">← 纯自然语言</span></pre>
+      </div>
+    </div>
+
+    <!-- 第8章：FAQ -->
+    <div class="section">
+      <span class="section-number">8</span>
+      <h2>常见问题（FAQ）</h2>
+
+      <div class="faq-item">
+        <div class="faq-q">Q：Token 是什么？我需要自己创建吗？</div>
+        <div class="faq-a">Token 是你登录调课后台后自动生成的凭证，不需要自己创建。你只需要在电脑上调课助手扩展里点「复制 Token」就行。</div>
+      </div>
+
+      <div class="faq-item">
+        <div class="faq-q">Q：Token 多久过期？</div>
+        <div class="faq-a">24 小时。过期后需要重新从电脑端复制一次。建议每天上班第一件事先复制，当天就不用担心。</div>
+      </div>
+
+      <div class="faq-item">
+        <div class="faq-q">Q：我没有电脑，只有手机怎么办？</div>
+        <div class="faq-a">目前获取 Token 需要电脑端的浏览器扩展。可以让同事帮忙复制 Token 发给你，你在手机上粘贴即可。但请注意，Token 不要发给不相关的人。</div>
+      </div>
+
+      <div class="faq-item">
+        <div class="faq-q">Q：输入姓名为什么提示"未找到学员"？</div>
+        <div class="faq-a">需要先在「设置」页导入学情表（Excel文件），工具才能把姓名匹配到学员ID。如果没导入学情表，请直接用学员ID（纯数字）。</div>
+      </div>
+
+      <div class="faq-item">
+        <div class="faq-q">Q：学情表是什么格式？</div>
+        <div class="faq-a">Excel 文件（.xlsx 或 .xls），Sheet1 的第一行是表头，需要包含"姓名""手机号""学员ID"三列（列名支持多种写法，工具会自动识别）。</div>
+      </div>
+
+      <div class="faq-item">
+        <div class="faq-q">Q：调课失败了怎么办？</div>
+        <div class="faq-a">1. 先看失败原因（会显示在结果里）；2. 确认学员ID和第几讲是否正确；3. 确认 Token 是否过期；4. 修正后重新输入执行。</div>
+      </div>
+
+      <div class="faq-item">
+        <div class="faq-q">Q："第几讲"填错了会怎样？</div>
+        <div class="faq-a">工具会找不到对应的课表记录，调课会失败。请确认你要调的是第几讲（在调课后台可以看到）。</div>
+      </div>
+
+      <div class="faq-item">
+        <div class="faq-q">Q：一次最多能调多少条？</div>
+        <div class="faq-a">没有硬性上限，但建议一次不超过 20 条。工具会自动3条一组并发执行，速度很快。</div>
+      </div>
+
+      <div class="faq-item">
+        <div class="faq-q">Q：调课操作可以撤销吗？</div>
+        <div class="faq-a">调课助手本身没有撤销功能。如果调错了，需要手动在调课后台改回来，或者用调课助手再调一次。建议执行前先仔细检查解析结果。</div>
+      </div>
+
+      <div class="faq-item">
+        <div class="faq-q">Q：手机上打开网页一直加载/白屏？</div>
+        <div class="faq-a">1. 检查网络是否正常；2. 试试刷新页面；3. 如果问题持续，可能是 Token 过期了，重新从电脑端复制。</div>
+      </div>
+
+      <div class="faq-item">
+        <div class="faq-q">Q：我把 Token 发给别人了怎么办？</div>
+        <div class="faq-a">Token 相当于你的登录凭证，别人拿到后可以用你的身份操作。建议：1. 尽快在调课后台退出登录重新登录，旧 Token 会自动失效；2. 删除聊天记录中的 Token。</div>
+      </div>
+    </div>
+
+    <!-- 底部 -->
+    <div class="footer">
+      <p>🎯 调课助手 · 操作说明书</p>
+      <p>V4 网页版 · 2026年5月</p>
+      <p style="margin-top: 12px; opacity: 0.5;">如有问题请联系运营负责人</p>
+    </div>
+
+  </div>
+</body>
+</html>

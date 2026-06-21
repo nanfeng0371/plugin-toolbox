@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>钉钉数据提取助手</title>
+  <style>
+    body {
+      width: 300px;
+      padding: 20px;
+      font-family: 'Microsoft YaHei', Arial, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+
+    .container {
+      background: white;
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+    }
+
+    h1 {
+      margin: 0 0 15px;
+      font-size: 18px;
+      color: #1890ff;
+      text-align: center;
+    }
+
+    .description {
+      font-size: 13px;
+      color: #666;
+      line-height: 1.6;
+      margin-bottom: 20px;
+    }
+
+    .button-group {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    button {
+      padding: 12px 20px;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #52c41a 0%, #73d13d 100%);
+      color: white;
+    }
+
+    .btn-primary:hover {
+      background: linear-gradient(135deg, #73d13d 0%, #95de64 100%);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(82, 196, 26, 0.4);
+    }
+
+    .btn-secondary {
+      background: #f0f0f0;
+      color: #666;
+    }
+
+    .btn-secondary:hover {
+      background: #e8e8e8;
+    }
+
+    .features {
+      margin-top: 20px;
+      padding: 15px;
+      background: #f6ffed;
+      border-radius: 8px;
+      border: 1px solid #b7eb8f;
+    }
+
+    .features h3 {
+      margin: 0 0 10px;
+      font-size: 14px;
+      color: #52c41a;
+    }
+
+    .features ul {
+      margin: 0;
+      padding-left: 20px;
+      font-size: 12px;
+      color: #666;
+    }
+
+    .features li {
+      margin: 5px 0;
+    }
+    
+    .dedup-option {
+      margin-top: 15px;
+      padding: 12px;
+      background: #fff7e6;
+      border-radius: 8px;
+      border: 1px solid #ffd591;
+    }
+    
+    .dedup-option label {
+      display: block;
+      font-size: 12px;
+      color: #d48806;
+      margin-bottom: 8px;
+      font-weight: bold;
+    }
+    
+    .dedup-option select {
+      width: 100%;
+      padding: 8px;
+      border: 1px solid #ffd591;
+      border-radius: 6px;
+      font-size: 12px;
+      background: white;
+      cursor: pointer;
+    }
+    
+    .dedup-option select:focus {
+      outline: none;
+      border-color: #fa8c16;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>📊 钉钉数据提取助手</h1>
+
+    <div class="description">
+      一键提取钉钉网页表格数据，支持自动滚动、智能去重、自动下载CSV文件
+    </div>
+
+    <div class="dedup-option">
+      <label>📋 去重模式</label>
+      <select id="dedup-mode">
+        <option value="id+time">默认：按 ID + 时间去重</option>
+        <option value="id-only">仅按 ID 去重（保留最新）</option>
+      </select>
+    </div>
+
+    <div class="button-group">
+      <button class="btn-primary" id="btn-show-panel">▶ 显示控制面板</button>
+      <button class="btn-secondary" id="btn-help">❓ 使用说明</button>
+    </div>
+
+    <div class="features">
+      <h3>✨ 功能特点</h3>
+      <ul>
+        <li>✅ 自动滚动提取所有数据</li>
+        <li>✅ 智能去重，避免重复记录</li>
+        <li>✅ 自动下载CSV文件</li>
+        <li>✅ 可调节滚动速度</li>
+      </ul>
+    </div>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

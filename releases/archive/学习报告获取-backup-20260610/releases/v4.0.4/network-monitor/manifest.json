@@ -1,0 +1,14 @@
+{
+  "manifest_version": 3,
+  "name": "网络监听器 - 学习报告调试",
+  "version": "1.1.0",
+  "description": "监听工作台点击报告按钮后的完整网络请求序列",
+  "permissions": ["debugger", "activeTab", "webRequest"],
+  "host_permissions": ["https://next.aitutor100.com/*", "https://*.aitutor100.com/*", "https://s1.aiv5.cc/*", "https://ai-genesis.yuaiweiwu.com/*"],
+  "background": {
+    "service_worker": "monitor.js"
+  },
+  "action": {
+    "default_title": "开始监听"
+  }
+}

@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>调课助手</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="app">
+    <!-- 头部标题 -->
+    <header class="app-header">
+      <h1>📚 调课助手</h1>
+      <span class="version">v1.0</span>
+    </header>
+
+    <!-- 连接状态 -->
+    <div id="connection-status" class="status-bar status-disconnected">
+      <span class="status-dot"></span>
+      <span class="status-text">未连接</span>
+    </div>
+
+    <!-- 数据输入区 -->
+    <section class="input-section">
+      <label class="section-label">粘贴调课数据（Tab分隔）</label>
+      <textarea
+        id="input-data"
+        placeholder="学员ID&#9;第几讲&#9;新日期&#9;新时间&#10;320207&#9;2&#9;2026-06-01&#9;14:00&#10;320215&#9;1&#9;2026-05-28&#9;16:00"
+        rows="6"
+      ></textarea>
+      <div class="input-hint">
+        格式：学员ID | 第几讲 | 新日期 | 新时间（每行一条，Tab分隔）
+      </div>
+      <div id="parse-feedback" class="parse-feedback hidden"></div>
+      <button id="btn-parse" class="btn btn-primary">解析数据</button>
+    </section>
+
+    <!-- 预览表格区 -->
+    <section id="preview-section" class="preview-section hidden">
+      <label class="section-label">数据预览</label>
+      <div class="table-wrapper">
+        <table id="preview-table">
+          <thead>
+            <tr>
+              <th class="col-index">#</th>
+              <th class="col-id">学员ID</th>
+              <th class="col-lesson">第几讲</th>
+              <th class="col-date">新日期</th>
+              <th class="col-time">新时间</th>
+              <th class="col-status">状态</th>
+            </tr>
+          </thead>
+          <tbody id="preview-tbody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- 执行控制区 -->
+    <section id="control-section" class="control-section hidden">
+      <div class="control-buttons">
+        <button id="btn-start" class="btn btn-success">▶ 开始执行</button>
+        <button id="btn-pause" class="btn btn-warning" disabled>⏸ 暂停</button>
+        <button id="btn-retry" class="btn btn-info" disabled>🔄 重试失败</button>
+      </div>
+    </section>
+
+    <!-- 进度与统计区 -->
+    <section id="stats-section" class="stats-section hidden">
+      <div class="progress-bar-wrapper">
+        <div id="progress-bar" class="progress-bar" style="width: 0%"></div>
+      </div>
+      <div class="stats-row">
+        <span class="stat-item stat-total">总计: <b id="stat-total">0</b></span>
+        <span class="stat-item stat-success">✅ 成功: <b id="stat-success">0</b></span>
+        <span class="stat-item stat-fail">❌ 失败: <b id="stat-fail">0</b></span>
+        <span class="stat-item stat-pending">⏳ 待执行: <b id="stat-pending">0</b></span>
+      </div>
+    </section>
+
+    <!-- 日志区 -->
+    <section id="log-section" class="log-section hidden">
+      <div class="log-header">
+        <label class="section-label">执行日志</label>
+        <button id="btn-export" class="btn btn-sm btn-outline">📥 导出结果</button>
+      </div>
+      <div id="log-container" class="log-container"></div>
+    </section>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

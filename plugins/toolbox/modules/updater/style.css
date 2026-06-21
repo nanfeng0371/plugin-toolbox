@@ -1,0 +1,206 @@
+/* Updater 模块样式 */
+/* 前缀：.upd- */
+
+.upd-module-root {
+  padding: 16px;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  color: #1a1a1a;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.upd-container {
+  max-width: 480px;
+  margin: 0 auto;
+}
+
+/* 标题 */
+.upd-header {
+  margin-bottom: 20px;
+  text-align: center;
+}
+
+.upd-title {
+  font-size: 20px;
+  font-weight: 700;
+  margin: 0 0 4px 0;
+  color: #1a1a1a;
+}
+
+.upd-subtitle {
+  font-size: 12px;
+  color: #888;
+  margin: 0;
+}
+
+/* 信息卡片 */
+.upd-card {
+  background: #fff;
+  border: 1px solid #e8e8e8;
+  border-radius: 10px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+.upd-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid #f5f5f5;
+}
+
+.upd-row:last-child {
+  border-bottom: none;
+}
+
+.upd-label {
+  font-size: 13px;
+  color: #666;
+}
+
+.upd-value {
+  font-size: 13px;
+  font-weight: 600;
+  color: #1a1a1a;
+}
+
+/* 状态颜色 */
+.upd-status-checking {
+  color: #faad14;
+}
+
+.upd-status-ok {
+  color: #52c41a;
+}
+
+.upd-status-update {
+  color: #1677ff;
+}
+
+.upd-status-error {
+  color: #ff4d4f;
+}
+
+/* 更新日志 */
+.upd-release-notes {
+  background: #fafafa;
+  border: 1px solid #e8e8e8;
+  border-radius: 8px;
+  padding: 12px 16px;
+  margin-bottom: 16px;
+}
+
+.upd-release-notes h3 {
+  font-size: 13px;
+  font-weight: 600;
+  margin: 0 0 8px 0;
+  color: #1a1a1a;
+}
+
+#upd-notes-content {
+  font-size: 12px;
+  color: #666;
+  white-space: pre-wrap;
+  word-break: break-all;
+  max-height: 200px;
+  overflow-y: auto;
+  margin: 0;
+}
+
+/* 进度条 */
+.upd-progress-wrap {
+  margin-bottom: 16px;
+}
+
+.upd-progress-bar {
+  height: 6px;
+  background: #f0f0f0;
+  border-radius: 3px;
+  overflow: hidden;
+  margin-bottom: 6px;
+}
+
+.upd-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #1677ff, #69b1ff);
+  border-radius: 3px;
+  transition: width 0.3s ease;
+  width: 0%;
+}
+
+.upd-progress-text {
+  font-size: 12px;
+  color: #888;
+  margin: 0;
+  text-align: center;
+}
+
+/* 按钮 */
+.upd-actions {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 16px;
+  justify-content: center;
+}
+
+.upd-btn {
+  padding: 8px 20px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  transition: all 0.2s;
+}
+
+.upd-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.upd-btn-primary {
+  background: #1677ff;
+  color: #fff;
+}
+
+.upd-btn-primary:hover:not(:disabled) {
+  background: #4096ff;
+}
+
+.upd-btn-success {
+  background: #52c41a;
+  color: #fff;
+}
+
+.upd-btn-success:hover:not(:disabled) {
+  background: #73d13d;
+}
+
+.upd-btn-secondary {
+  background: #fff;
+  color: #666;
+  border: 1px solid #d9d9d9;
+}
+
+.upd-btn-secondary:hover:not(:disabled) {
+  color: #1677ff;
+  border-color: #1677ff;
+}
+
+/* 提示文字 */
+.upd-hint {
+  background: #f6f8fa;
+  border-radius: 8px;
+  padding: 12px 16px;
+}
+
+.upd-hint p {
+  font-size: 12px;
+  color: #888;
+  margin: 0 0 4px 0;
+}
+
+.upd-hint p:last-child {
+  margin-bottom: 0;
+}

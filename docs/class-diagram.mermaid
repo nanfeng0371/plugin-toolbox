@@ -1,0 +1,55 @@
+## Data Structures - Toolbox Phase2
+
+```mermaid
+classDiagram
+    class ModuleConfig {
+        +string name              "report"
+        +string label             "辅导报告"
+        +string version           "1.0.0"
+        +string icon              "report.svg"
+        +string description       "模块功能描述"
+        +string[] permissions     ["cookies", "downloads"]
+        +string[] hostPermissions  ["https://.../*"]
+        +EntryConfig entry
+        +ContentScriptConfig[] contentScripts
+        +boolean hasBackground    true
+    }
+
+    class EntryConfig {
+        +string content    "content.js"
+        +string background "background.js"
+        +string css        "panel.css"
+    }
+
+    class ContentScriptConfig {
+        +string[] matches  ["https://next.aitutor100.com/reportV2.html*"]
+        +string js         "report_fetcher.js"
+        +boolean allFrames true
+        +string runAt      "document_idle"
+    }
+
+    class ModuleState {
+        +string name
+        +string status      "registered|enabled|loaded|active|error"
+        +boolean enabled    true
+        +string error       null
+        +number loadedAt    1711400000000
+    }
+
+    class HandlerRegistry {
+        +Map handlers      "moduleName → Map(action → handlerFn)"
+        +register(moduleName, actionMap) void
+        +getHandler(moduleName, action) Function
+        +hasHandler(moduleName, action) boolean
+    }
+
+    class Message {
+        +string target      "report" | "shell"
+        +string action      "FETCH_STUDENTS"
+        +Object data        "{ ... }"
+    }
+
+    ModuleConfig --> EntryConfig
+    ModuleConfig --> ContentScriptConfig
+    HandlerRegistry --> Message
+```

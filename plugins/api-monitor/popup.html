@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>API 接口监听器</title>
+  <link rel="stylesheet" href="popup.css">
+  <style>
+    /* 额外样式：高亮标签、域名筛选 */
+    .tag {
+      display: inline-block;
+      padding: 1px 5px;
+      border-radius: 3px;
+      font-size: 10px;
+      font-weight: bold;
+      margin-left: 3px;
+      vertical-align: middle;
+    }
+    .tag-lesson   { background: #d4edda; color: #155724; }
+    .tag-student  { background: #cce5ff; color: #004085; }
+    .tag-report   { background: #fff3cd; color: #856404; }
+    .tag-biz      { background: #f8d7da; color: #721c24; }
+    .tag-other    { background: #e2e3e5; color: #383d41; }
+
+    .filter-row   { display: flex; gap: 4px; padding: 4px 8px; background: #f8f9fa; border-bottom: 1px solid #dee2e6; flex-wrap: wrap; align-items: center; }
+    .filter-row select { flex: 1; min-width: 0; font-size: 11px; padding: 2px 4px; border: 1px solid #ced4da; border-radius: 3px; }
+    .filter-row input  { flex: 2; min-width: 0; font-size: 11px; padding: 2px 6px; border: 1px solid #ced4da; border-radius: 3px; }
+
+    .btn-export-full { background: #28a745; color: #fff; border: none; }
+    .btn-export-full:hover { background: #218838; }
+
+    .highlight-lesson { border-left: 3px solid #28a745 !important; }
+    .highlight-student { border-left: 3px solid #007bff !important; }
+    .highlight-report  { border-left: 3px solid #ffc107 !important; }
+    .highlight-biz     { border-left: 3px solid #dc3545 !important; }
+
+    .req-page { font-size: 10px; color: #6c757d; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 280px; margin-top: 1px; }
+
+    .stats-bar { font-size: 10px; color: #6c757d; padding: 2px 8px; background: #fff; border-bottom: 1px solid #eee; display: flex; gap: 8px; }
+    .stats-bar span b { color: #343a40; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <span class="title">📡 API 监听器 <small style="font-size:10px;opacity:.6">v1.1.0</small></span>
+    <span class="badge" id="countBadge">0 条</span>
+  </div>
+
+  <div class="toolbar">
+    <button class="btn primary" id="btnToggle">⏸ 停止</button>
+    <button class="btn" id="btnClear">🗑 清空</button>
+    <button class="btn btn-export-full" id="btnExportAll">📥 导出全部</button>
+    <button class="btn btn-test" id="btnTestFetch" title="测试当前页面能否直接调用爱芯 API">🧪 同源测试</button>
+  </div>
+
+  <!-- 统计栏 -->
+  <div class="stats-bar" id="statsBar">
+    <span>课堂: <b id="statLesson">0</b></span>
+    <span>学生: <b id="statStudent">0</b></span>
+    <span>报告: <b id="statReport">0</b></span>
+    <span>业务: <b id="statBiz">0</b></span>
+    <span>其他: <b id="statOther">0</b></span>
+  </div>
+
+  <!-- v1.2.0: 同源测试结果区 -->
+  <div class="origin-panel" id="originPanel" style="display:none;">
+    <div class="origin-header">
+      <span>🔗 同源分析</span>
+      <button class="btn small" id="btnCloseOrigin" style="line-height:1;">✕</button>
+    </div>
+    <div class="origin-body" id="originBody"></div>
+  </div>
+
+  <!-- 筛选行 -->
+  <div class="filter-row">
+    <select id="domainFilter">
+      <option value="">全部域名</option>
+      <option value="aitutor100">aitutor100</option>
+    </select>
+    <select id="categoryFilter">
+      <option value="">全部类型</option>
+      <option value="lesson">课堂接口</option>
+      <option value="student">学生接口</option>
+      <option value="report">报告接口</option>
+      <option value="biz">业务接口</option>
+      <option value="other">其他</option>
+    </select>
+    <input type="text" id="filterInput" placeholder="🔍 过滤 URL...">
+  </div>
+
+  <div class="request-list" id="requestList">
+    <div class="empty">暂无捕获的请求</div>
+  </div>
+
+  <div class="footer">
+    <label class="checkbox">
+      <input type="checkbox" id="autoScroll" checked>
+      自动滚动
+    </label>
+    <span>最多保留 1000 条</span>
+  </div>
+
+  <!-- 详情面板 -->
+  <div class="detail-panel" id="detailPanel" style="display:none;">
+    <div class="detail-header">
+      <span>📄 请求详情</span>
+      <div style="display:flex;gap:4px;">
+        <button class="btn small" id="btnCopyDetail">📋 复制</button>
+        <button class="btn small" id="btnCloseDetail">✕</button>
+      </div>
+    </div>
+    <div class="detail-body" id="detailBody"></div>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

@@ -1,0 +1,26 @@
+{
+  "manifest_version": 3,
+  "name": "API 抓包调试器",
+  "version": "1.0.1",
+  "description": "拦截 ai-genesis.yuaiweiwu.com 上的 /prod-api/ 请求，调试 heatmap 模块",
+  "permissions": [
+    "activeTab"
+  ],
+  "host_permissions": [
+    "https://ai-genesis.yuaiweiwu.com/*"
+  ],
+  "content_scripts": [
+    {
+      "matches": ["https://ai-genesis.yuaiweiwu.com/*"],
+      "js": ["content.js"],
+      "run_at": "document_start",
+      "all_frames": false
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["inject.js"],
+      "matches": ["https://ai-genesis.yuaiweiwu.com/*"]
+    }
+  ]
+}

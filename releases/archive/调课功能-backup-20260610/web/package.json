@@ -1,0 +1,12 @@
+{
+  "name": "tk-web",
+  "version": "1.0.0",
+  "private": true,
+  "description": "调课助手网页版前端",
+  "scripts": {
+    "build": "node build.js"
+  },
+  "devDependencies": {
+    "esbuild": "^0.21.0"
+  }
+}

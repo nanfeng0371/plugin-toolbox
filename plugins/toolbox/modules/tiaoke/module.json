@@ -1,0 +1,15 @@
+{
+  "name": "tiaoke",
+  "label": "📚 调课助手",
+  "version": "4.0.0",
+  "icon": "",
+  "description": "批量调课工具，粘贴数据即可自动批量提交改约",
+  "permissions": [],
+  "hostPermissions": [],
+  "hasBackground": true,
+  "entry": {
+    "content": "content.js",
+    "css": "style.css"
+  },
+  "enabled": true
+}

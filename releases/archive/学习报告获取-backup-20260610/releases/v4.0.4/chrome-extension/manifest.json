@@ -1,0 +1,44 @@
+{
+  "manifest_version": 3,
+  "name": "学习报告批量分析",
+  "version": "4.0.4",
+  "description": "一键批量获取AI老师学习报告数据，自动分析听课质量，导出Excel",
+  "permissions": ["cookies", "activeTab", "storage", "downloads"],
+  "host_permissions": [
+    "https://ai-genesis.yuaiweiwu.com/*",
+    "https://s1.aiv5.cc/*",
+    "https://next.aitutor100.com/*",
+    "https://*.aitutor100.com/*"
+  ],
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://ai-genesis.yuaiweiwu.com/*"],
+      "js": ["content.js"],
+      "css": ["panel.css"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": ["https://next.aitutor100.com/reportV2.html*"],
+      "js": ["report_fetcher.js"],
+      "run_at": "document_idle",
+      "all_frames": true
+    }
+  ],
+  "action": {
+    "default_title": "学习报告分析",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  }
+}

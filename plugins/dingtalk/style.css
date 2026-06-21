@@ -1,0 +1,314 @@
+/* 钉钉数据提取助手 - 样式文件 */
+
+#dingtalk-extractor-panel {
+  position: fixed !important;
+  top: 20px !important;
+  right: 20px !important;
+  z-index: 2147483647 !important;
+  font-family: 'Microsoft YaHei', Arial, sans-serif !important;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3) !important;
+}
+
+.dingtalk-extractor-container {
+  background: #ffffff !important;
+  border: 3px solid #1890ff !important;
+  border-radius: 12px !important;
+  padding: 20px !important;
+  width: 360px !important;
+  box-sizing: border-box !important;
+}
+
+.dingtalk-extractor-header {
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+  margin-bottom: 15px !important;
+  padding-bottom: 10px !important;
+  border-bottom: 2px solid #f0f0f0 !important;
+}
+
+.dingtalk-extractor-title {
+  font-size: 18px !important;
+  font-weight: bold !important;
+  color: #1890ff !important;
+}
+
+.dingtalk-extractor-close {
+  background: none !important;
+  border: none !important;
+  font-size: 20px !important;
+  color: #999 !important;
+  cursor: pointer !important;
+  padding: 5px !important;
+  line-height: 1 !important;
+}
+
+.dingtalk-extractor-close:hover {
+  color: #ff4d4f !important;
+}
+
+.dingtalk-extractor-status {
+  background: linear-gradient(135deg, #f6ffed 0%, #d9f7be 100%) !important;
+  border: 2px solid #b7eb8f !important;
+  border-radius: 8px !important;
+  padding: 12px !important;
+  margin-bottom: 10px !important;
+  font-size: 13px !important;
+  color: #333 !important;
+  min-height: 50px !important;
+  line-height: 1.5 !important;
+}
+
+.dingtalk-extractor-info {
+  font-size: 14px !important;
+  color: #1890ff !important;
+  font-weight: bold !important;
+  margin-bottom: 15px !important;
+  min-height: 20px !important;
+}
+
+.dingtalk-extractor-buttons {
+  display: flex !important;
+  gap: 8px !important;
+  margin-bottom: 15px !important;
+}
+
+.dingtalk-extractor-buttons button {
+  flex: 1 !important;
+  padding: 10px 15px !important;
+  border: none !important;
+  border-radius: 6px !important;
+  cursor: pointer !important;
+  font-size: 14px !important;
+  font-weight: bold !important;
+  transition: all 0.3s !important;
+  white-space: nowrap !important;
+}
+
+#btn-start {
+  background: linear-gradient(135deg, #52c41a 0%, #73d13d 100%) !important;
+  color: white !important;
+}
+
+#btn-start:hover {
+  background: linear-gradient(135deg, #73d13d 0%, #95de64 100%) !important;
+  transform: translateY(-2px) !important;
+  box-shadow: 0 4px 12px rgba(82, 196, 26, 0.4) !important;
+}
+
+#btn-stop {
+  background: linear-gradient(135deg, #ff4d4f 0%, #ff7875 100%) !important;
+  color: white !important;
+}
+
+#btn-stop:hover {
+  background: linear-gradient(135deg, #ff7875 0%, #ffa39e 100%) !important;
+  transform: translateY(-2px) !important;
+  box-shadow: 0 4px 12px rgba(255, 77, 79, 0.4) !important;
+}
+
+#btn-download {
+  background: linear-gradient(135deg, #1890ff 0%, #40a9ff 100%) !important;
+  color: white !important;
+}
+
+#btn-download:hover {
+  background: linear-gradient(135deg, #40a9ff 0%, #69c0ff 100%) !important;
+  transform: translateY(-2px) !important;
+  box-shadow: 0 4px 12px rgba(24, 144, 255, 0.4) !important;
+}
+
+.dingtalk-extractor-settings {
+  background: #f5f5f5 !important;
+  border-radius: 8px !important;
+  padding: 12px !important;
+}
+
+.dingtalk-extractor-settings label {
+  display: flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+  font-size: 12px !important;
+  color: #666 !important;
+}
+
+.dingtalk-extractor-settings input[type="range"] {
+  flex: 1 !important;
+  cursor: pointer !important;
+}
+
+.dingtalk-extractor-settings span {
+  min-width: 60px !important;
+}
+
+/* 动画效果 */
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+#dingtalk-extractor-panel {
+  animation: slideIn 0.3s ease-out !important;
+}
+
+/* 响应式设计 */
+@media (max-width: 480px) {
+  .dingtalk-extractor-container {
+    width: 300px !important;
+  }
+
+  .dingtalk-extractor-buttons {
+    flex-wrap: wrap !important;
+  }
+
+  .dingtalk-extractor-buttons button {
+    flex: 1 0 100% !important;
+  }
+}
+
+/* ========== 表格选择器样式 ========== */
+
+/* 选择器外层容器（透明全屏，用于感知点击边缘） */
+#dingtalk-table-selector {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  z-index: 2147483647 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  font-family: 'Microsoft YaHei', Arial, sans-serif !important;
+  pointer-events: auto !important;
+}
+
+/* 选择器遮罩层（在容器内，绝对定位，z-index较低） */
+.table-selector-overlay {
+  position: absolute !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  background: rgba(0, 0, 0, 0.5) !important;
+  z-index: 1 !important;
+}
+
+/* 内容框（在遮罩上方，z-index较高，不被遮罩拦截） */
+.table-selector-content {
+  position: relative !important;
+  z-index: 2 !important;
+  background: white !important;
+  border-radius: 16px !important;
+  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.3) !important;
+  width: 90% !important;
+  max-width: 500px !important;
+  max-height: 80vh !important;
+  overflow: hidden !important;
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+.table-selector-header {
+  background: linear-gradient(135deg, #1890ff 0%, #40a9ff 100%) !important;
+  color: white !important;
+  padding: 16px 20px !important;
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+  font-size: 16px !important;
+  font-weight: bold !important;
+}
+
+#btn-close-selector {
+  background: rgba(255, 255, 255, 0.2) !important;
+  border: none !important;
+  color: white !important;
+  font-size: 18px !important;
+  width: 28px !important;
+  height: 28px !important;
+  border-radius: 50% !important;
+  cursor: pointer !important;
+  line-height: 1 !important;
+  transition: all 0.2s !important;
+}
+
+#btn-close-selector:hover {
+  background: rgba(255, 255, 255, 0.3) !important;
+  transform: scale(1.1) !important;
+}
+
+.table-selector-list {
+  padding: 16px !important;
+  overflow-y: auto !important;
+  flex: 1 !important;
+}
+
+.table-option {
+  background: #f5f5f5 !important;
+  border: 2px solid transparent !important;
+  border-radius: 10px !important;
+  padding: 14px !important;
+  margin-bottom: 10px !important;
+  cursor: pointer !important;
+  transition: all 0.2s !important;
+}
+
+.table-option:hover {
+  background: #e6f7ff !important;
+  border-color: #1890ff !important;
+  transform: translateY(-2px) !important;
+}
+
+.table-option.selected {
+  background: #bae7ff !important;
+  border-color: #1890ff !important;
+  box-shadow: 0 2px 8px rgba(24, 144, 255, 0.3) !important;
+}
+
+.table-option-label {
+  font-size: 14px !important;
+  font-weight: bold !important;
+  color: #333 !important;
+  margin-bottom: 6px !important;
+}
+
+.table-option-preview {
+  font-size: 12px !important;
+  color: #666 !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+.table-selector-footer {
+  padding: 12px 16px !important;
+  background: #fafafa !important;
+  text-align: center !important;
+  border-top: 1px solid #eee !important;
+}
+
+/* 选择表格按钮样式 */
+#btn-select-table {
+  width: 100% !important;
+  padding: 10px !important;
+  margin-bottom: 10px !important;
+  border: none !important;
+  border-radius: 6px !important;
+  font-size: 14px !important;
+  font-weight: bold !important;
+  color: white !important;
+  cursor: pointer !important;
+  transition: all 0.3s !important;
+}
+
+#btn-select-table:hover {
+  transform: translateY(-2px) !important;
+  box-shadow: 0 4px 12px rgba(114, 46, 209, 0.4) !important;
+}

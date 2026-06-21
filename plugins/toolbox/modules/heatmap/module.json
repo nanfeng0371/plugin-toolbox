@@ -1,0 +1,15 @@
+{
+  "name": "heatmap",
+  "label": "📊 排期分析",
+  "version": "1.0.0",
+  "icon": "",
+  "description": "课程排期分析看板：热力图、下钻明细、异常检测、学生日历导出",
+  "permissions": [],
+  "hostPermissions": [],
+  "hasBackground": true,
+  "entry": {
+    "content": "content.js",
+    "css": "content.css"
+  },
+  "enabled": true
+}

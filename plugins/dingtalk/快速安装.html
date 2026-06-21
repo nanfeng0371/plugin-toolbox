@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>钉钉数据提取助手 - 安装向导</title>
+  <style>
+    body {
+      font-family: 'Microsoft YaHei', Arial, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      padding: 40px 20px;
+    }
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      background: white;
+      border-radius: 20px;
+      padding: 40px;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+    }
+    h1 {
+      text-align: center;
+      color: #1890ff;
+      margin-bottom: 30px;
+    }
+    .step {
+      background: #f6ffed;
+      border-left: 4px solid #52c41a;
+      padding: 20px;
+      margin: 20px 0;
+      border-radius: 8px;
+    }
+    .step-number {
+      font-size: 24px;
+      font-weight: bold;
+      color: #52c41a;
+      margin-bottom: 10px;
+    }
+    .step-content {
+      font-size: 14px;
+      line-height: 1.8;
+      color: #333;
+    }
+    .button {
+      display: inline-block;
+      background: linear-gradient(135deg, #1890ff 0%, #40a9ff 100%);
+      color: white;
+      padding: 15px 30px;
+      border-radius: 8px;
+      text-decoration: none;
+      font-weight: bold;
+      font-size: 16px;
+      margin: 10px;
+      transition: all 0.3s;
+    }
+    .button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(24, 144, 255, 0.4);
+    }
+    .success {
+      background: #f6ffed;
+      border: 2px solid #b7eb8f;
+      padding: 15px;
+      border-radius: 8px;
+      margin-top: 20px;
+    }
+    .success h3 {
+      color: #52c41a;
+      margin: 0 0 10px;
+    }
+    .code {
+      background: #f5f5f5;
+      padding: 10px;
+      border-radius: 4px;
+      font-family: 'Courier New', monospace;
+      font-size: 12px;
+      margin: 10px 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>📊 钉钉数据提取助手 - 安装向导</h1>
+
+    <div style="text-align: center; margin-bottom: 30px;">
+      <p style="font-size: 16px; color: #666;">
+        只需30秒，一键提取钉钉表格数据！
+      </p>
+      <a href="edge://extensions/" target="_blank" class="button">🚀 立即安装插件</a>
+    </div>
+
+    <div class="step">
+      <div class="step-number">步骤 1/4</div>
+      <div class="step-content">
+        <strong>打开Edge扩展页面</strong><br>
+        点击上面的"立即安装插件"按钮，或者手动在Edge浏览器地址栏输入：<br>
+        <div class="code">edge://extensions/</div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-number">步骤 2/4</div>
+      <div class="step-content">
+        <strong>启用开发者模式</strong><br>
+        在扩展页面右上角，找到"开发人员模式"开关，<br>
+        将其打开（变为蓝色）
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-number">步骤 3/4</div>
+      <div class="step-content">
+        <strong>加载插件</strong><br>
+        点击"加载已解压的扩展"按钮，<br>
+        然后选择本文件夹：<br>
+        <div class="code">c:\Users\wy260\WorkBuddy\20260316171000</div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-number">步骤 4/4</div>
+      <div class="step-content">
+        <strong>完成安装</strong><br>
+        如果提示缺少图标文件，可以忽略或手动创建<br>
+        插件图标会出现在浏览器右上角
+      </div>
+    </div>
+
+    <div class="success">
+      <h3>✅ 安装完成！</h3>
+      <ol style="margin: 10px 0; padding-left: 20px; line-height: 2;">
+        <li>打开钉钉网页并登录</li>
+        <li>导航到数据页面</li>
+        <li>点击浏览器右上角的插件图标</li>
+        <li>点击"显示控制面板"</li>
+        <li>点击"开始提取"按钮</li>
+        <li>等待自动下载CSV文件</li>
+      </ol>
+    </div>
+
+    <div style="background: #fff7e6; border: 2px solid #ffd591; padding: 15px; border-radius: 8px; margin-top: 20px;">
+      <h3 style="color: #fa8c16; margin: 0 0 10px;">💡 使用提示</h3>
+      <ul style="margin: 10px 0; padding-left: 20px; color: #666;">
+        <li>首次使用需要显示控制面板</li>
+        <li>可以调节滚动速度</li>
+        <li>支持随时停止和手动下载</li>
+        <li>自动去重，避免重复数据</li>
+      </ul>
+    </div>
+
+    <div style="text-align: center; margin-top: 30px;">
+      <a href="edge://extensions/" target="_blank" class="button">🔄 再次打开扩展页面</a>
+      <a href="#" onclick="window.print()" class="button">📄 打印本指南</a>
+    </div>
+
+    <div style="text-align: center; margin-top: 20px; color: #999; font-size: 12px;">
+      如有问题，请查看 <code>插件安装说明.md</code> 文件
+    </div>
+  </div>
+</body>
+</html>

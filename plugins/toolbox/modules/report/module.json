@@ -1,0 +1,25 @@
+{
+  "name": "report",
+  "label": "学习报告分析",
+  "description": "批量获取学习报告数据，进行四维评价分析和导出",
+  "version": "5.2.0",
+  "entry": {
+    "background": "background.js",
+    "content": "content.js",
+    "css": "panel.css"
+  },
+  "hasBackground": true,
+  "permissions": ["activeTab", "storage"],
+  "contentScripts": [
+    {
+      "matches": ["*://ai-genesis.yuaiweiwu.com/*", "*://www.yuaiweiwu.com/*"],
+      "runAt": "document_idle"
+    },
+    {
+      "matches": ["https://next.aitutor100.com/reportV2.html*"],
+      "js": ["report_fetcher.js"],
+      "runAt": "document_idle",
+      "all_frames": true
+    }
+  ]
+}

@@ -1,0 +1,11 @@
+Windows Registry Editor Version 5.00
+
+; ============================================================
+; 插件工作箱 v2.2.78 — Chrome 一键安装（当前用户版，无需管理员）
+; ============================================================
+; 如果 HKLM 版本导入后没效果，用这个版本试试
+; ============================================================
+
+[HKEY_CURRENT_USER\SOFTWARE\Policies\Google\Chrome]
+[HKEY_CURRENT_USER\SOFTWARE\Policies\Google\Chrome\ExtensionInstallForcelist]
+"1"="nmpdifejooglhkcilhgjkhggbioalojk;https://renewal-calendar-7ff2rtj4f876144-1259283480.tcloudbaseapp.com/extensions/toolbox/update.xml"

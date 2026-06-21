@@ -1,0 +1,271 @@
+/* ============================================
+   调课助手模块样式 — Shadow DOM 内部，tk- 前缀防污染
+   ============================================ */
+
+/* 区段标题 */
+.tk-section-label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: #2c3e50;
+  margin-bottom: 6px;
+}
+
+/* 连接状态栏 */
+.tk-status-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: 4px;
+  margin-bottom: 10px;
+  font-size: 12px;
+}
+.tk-status-disconnected { background: #fff3f3; color: #c0392b; }
+.tk-status-connected { background: #f0faf0; color: #27ae60; }
+
+.tk-status-dot {
+  width: 8px; height: 8px; border-radius: 50%; display: inline-block;
+}
+.tk-status-disconnected .tk-status-dot { background: #e74c3c; }
+.tk-status-connected .tk-status-dot { background: #27ae60; }
+
+/* 学员信息簿区域 */
+.tk-roster-section {
+  margin-bottom: 12px;
+  padding: 8px 10px;
+  background: #fff;
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+}
+.tk-roster-header {
+  display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;
+}
+.tk-roster-header .tk-section-label { margin-bottom: 0; }
+.tk-roster-status { font-size: 11px; padding: 2px 8px; border-radius: 3px; }
+.tk-roster-loaded { color: #27ae60; background: #f0faf0; }
+.tk-roster-empty { color: #999; background: #f5f5f5; }
+.tk-roster-actions { display: flex; gap: 6px; align-items: center; }
+
+/* 输入区 */
+.tk-input-section { margin-bottom: 12px; }
+
+.tk-textarea {
+  width: 100%; padding: 8px 10px;
+  border: 1px solid #d1d5db; border-radius: 6px;
+  font-size: 12px; font-family: "SF Mono","Menlo","Monaco","Courier New",monospace;
+  line-height: 1.6; resize: vertical; background: #fff; color: #333;
+  transition: border-color 0.2s; box-sizing: border-box;
+}
+.tk-textarea:focus {
+  outline: none; border-color: #4a90d9;
+  box-shadow: 0 0 0 2px rgba(74,144,217,0.15);
+}
+.tk-textarea::placeholder { color: #aaa; }
+
+.tk-input-hint { font-size: 11px; color: #888; margin-top: 4px; margin-bottom: 8px; }
+
+/* 解析反馈 */
+.tk-parse-feedback {
+  padding: 6px 10px; border-radius: 4px; margin-bottom: 8px;
+  font-size: 12px; font-weight: 500; line-height: 1.5;
+}
+.tk-feedback-success { background: #f0faf0; color: #27ae60; border: 1px solid #c8e6c9; }
+.tk-feedback-error { background: #fff3f3; color: #c0392b; border: 1px solid #f5c6cb; }
+.tk-feedback-info { background: #eef4fb; color: #2980b9; border: 1px solid #b8daff; }
+.tk-hidden { display: none !important; }
+
+/* 按钮通用 */
+.tk-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  padding: 7px 16px; border: none; border-radius: 5px;
+  font-size: 13px; font-weight: 500; cursor: pointer;
+  transition: all 0.2s; white-space: nowrap;
+}
+.tk-btn:active { transform: scale(0.97); }
+.tk-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+.tk-btn-primary { background: #4a90d9; color: #fff; width: 100%; }
+.tk-btn-primary:hover:not(:disabled) { background: #3a7bc8; }
+.tk-btn-success { background: #27ae60; color: #fff; }
+.tk-btn-success:hover:not(:disabled) { background: #219a52; }
+.tk-btn-warning { background: #f39c12; color: #fff; }
+.tk-btn-warning:hover:not(:disabled) { background: #d68910; }
+.tk-btn-info { background: #3498db; color: #fff; }
+.tk-btn-info:hover:not(:disabled) { background: #2980b9; }
+.tk-btn-secondary { background: #f0f4f8; color: #4a90d9; border: 1px solid #d1d5db; }
+.tk-btn-secondary:hover:not(:disabled) { background: #eef4fb; }
+.tk-btn-outline { background: #fff; color: #4a90d9; border: 1px solid #4a90d9; padding: 4px 10px; font-size: 11px; }
+.tk-btn-outline:hover:not(:disabled) { background: #eef4fb; }
+.tk-btn-danger { color: #e74c3c; border-color: #e74c3c; }
+.tk-btn-danger:hover:not(:disabled) { background: #fff5f5; }
+.tk-btn-sm { padding: 4px 10px; font-size: 11px; }
+.tk-btn-block { width: 100%; }
+
+.tk-btn-copied { background: #27ae60 !important; border-color: #27ae60 !important; color: #fff !important; }
+
+/* 预览表格 */
+.tk-preview-section { margin-bottom: 12px; }
+.tk-table-wrapper {
+  max-height: 200px; overflow-y: auto;
+  border: 1px solid #e0e0e0; border-radius: 6px; background: #fff;
+}
+.tk-preview-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.tk-preview-table th {
+  position: sticky; top: 0; background: #f0f4f8; color: #2c3e50;
+  font-weight: 600; padding: 6px 8px; text-align: center;
+  border-bottom: 2px solid #d1d5db; z-index: 1;
+}
+.tk-preview-table td {
+  padding: 5px 8px; text-align: center; border-bottom: 1px solid #f0f0f0; color: #555;
+}
+.tk-preview-table tbody tr:hover { background: #f8fbff; }
+
+.tk-col-index { width: 30px; }
+.tk-col-id { width: 70px; }
+.tk-col-lesson { width: 55px; }
+.tk-col-date { width: 85px; }
+.tk-col-time { width: 55px; }
+.tk-col-status { width: 70px; }
+
+.tk-status-pending { color: #888; }
+.tk-status-running { color: #f39c12; font-weight: 600; }
+.tk-status-success { color: #27ae60; font-weight: 600; }
+.tk-status-fail { color: #e74c3c; font-weight: 600; }
+
+/* 控制区 */
+.tk-control-section { margin-bottom: 12px; }
+.tk-control-buttons { display: flex; gap: 8px; }
+.tk-control-buttons .tk-btn { flex: 1; }
+
+/* 统计区 */
+.tk-stats-section { margin-bottom: 12px; }
+.tk-progress-bar-wrapper {
+  height: 8px; background: #e9ecef; border-radius: 4px;
+  overflow: hidden; margin-bottom: 8px;
+}
+.tk-progress-bar {
+  height: 100%; background: linear-gradient(90deg, #4a90d9, #27ae60);
+  border-radius: 4px; transition: width 0.3s ease;
+}
+.tk-stats-row { display: flex; justify-content: space-between; font-size: 12px; }
+.tk-stat-item { color: #666; }
+.tk-stat-item b { font-weight: 600; }
+.tk-stat-total b { color: #2c3e50; }
+.tk-stat-success b { color: #27ae60; }
+.tk-stat-fail b { color: #e74c3c; }
+.tk-stat-pending b { color: #888; }
+
+/* 日志区 */
+.tk-log-section { margin-bottom: 8px; }
+.tk-log-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+.tk-log-container {
+  max-height: 150px; overflow-y: auto;
+  border: 1px solid #e0e0e0; border-radius: 6px; background: #fff;
+  padding: 6px 8px; font-size: 11px;
+  font-family: "SF Mono","Menlo",monospace; line-height: 1.6;
+}
+.tk-log-entry { padding: 2px 0; border-bottom: 1px solid #f5f5f5; }
+.tk-log-entry:last-child { border-bottom: none; }
+.tk-log-time { color: #999; margin-right: 6px; }
+.tk-log-success { color: #27ae60; }
+.tk-log-fail { color: #e74c3c; }
+.tk-log-info { color: #4a90d9; }
+.tk-log-warn { color: #f39c12; }
+
+/* ===== Token 面板 ===== */
+.tk-token-section { padding: 4px 0; }
+
+.tk-token-card {
+  display: flex; align-items: center; gap: 10px;
+  padding: 14px 12px; border-radius: 8px; margin-bottom: 12px;
+  font-size: 13px; line-height: 1.5; transition: all 0.3s;
+}
+.tk-token-card-icon { font-size: 22px; flex-shrink: 0; }
+.tk-token-card-text { font-weight: 500; }
+.tk-token-card-checking { background: #f0f4f8; color: #555; border: 1px solid #d1d5db; }
+.tk-token-card-valid { background: #f0faf0; color: #1a7a3a; border: 1px solid #a5d6a7; }
+.tk-token-card-expired { background: #fff8e1; color: #e65100; border: 1px solid #ffcc80; }
+.tk-token-card-empty { background: #fff3f3; color: #c0392b; border: 1px solid #f5c6cb; }
+
+.tk-token-detail {
+  background: #fff; border: 1px solid #e0e0e0; border-radius: 6px;
+  padding: 10px 12px; margin-bottom: 12px; font-size: 12px;
+}
+.tk-token-detail-row {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 4px 0; border-bottom: 1px solid #f5f5f5;
+}
+.tk-token-detail-row:last-child { border-bottom: none; }
+.tk-token-detail-label { color: #888; font-size: 11px; flex-shrink: 0; }
+.tk-token-preview {
+  color: #333; font-family: "SF Mono","Menlo","Monaco","Courier New",monospace;
+  font-size: 11px; word-break: break-all; cursor: pointer;
+  max-width: 260px; text-align: right;
+}
+.tk-token-preview:hover { color: #4a90d9; }
+.tk-token-expire { color: #27ae60; font-weight: 500; }
+.tk-token-user { color: #333; font-weight: 500; }
+
+.tk-token-actions { display: flex; flex-direction: column; gap: 8px; margin-bottom: 14px; }
+
+.tk-token-help {
+  background: #f8f9fa; border-radius: 6px; padding: 10px 12px;
+  font-size: 12px; line-height: 1.7; color: #555;
+}
+.tk-token-help ol { padding-left: 18px; margin: 6px 0; }
+.tk-token-help li { margin-bottom: 4px; }
+.tk-token-help b { color: #2c3e50; }
+.tk-token-help-note { margin-top: 8px; font-size: 11px; color: #888; }
+
+/* ===== 内部 Tab（Token / 调课 / 历史日志） ===== */
+.tk-tab-bar {
+  display: flex; gap: 0; margin-bottom: 10px;
+  border-bottom: 2px solid #e0e0e0;
+}
+.tk-tab-btn {
+  flex: 1; padding: 7px 8px; border: none; background: transparent;
+  font-size: 12px; font-weight: 500; color: #888; cursor: pointer;
+  border-bottom: 2px solid transparent; margin-bottom: -2px;
+  transition: all 0.2s; white-space: nowrap;
+}
+.tk-tab-btn:hover { color: #4a90d9; }
+.tk-tab-btn.tk-tab-active { color: #4a90d9; border-bottom-color: #4a90d9; font-weight: 600; }
+
+.tk-tab-panel { display: none; }
+.tk-tab-panel.tk-tab-panel-active { display: block; }
+
+/* 历史日志 */
+.tk-history-header {
+  display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;
+}
+.tk-history-container {
+  max-height: 460px; overflow-y: auto;
+  border: 1px solid #e0e0e0; border-radius: 6px; background: #fff;
+}
+.tk-history-empty { text-align: center; color: #999; padding: 40px 10px; font-size: 13px; }
+.tk-history-date-group { border-bottom: 1px solid #e0e0e0; }
+.tk-history-date-label {
+  background: #f0f4f8; padding: 6px 10px; font-size: 12px;
+  font-weight: 600; color: #2c3e50; position: sticky; top: 0; z-index: 1;
+}
+.tk-history-item {
+  padding: 8px 10px; border-bottom: 1px solid #f5f5f5;
+  font-size: 11px; line-height: 1.6;
+}
+.tk-history-item:last-child { border-bottom: none; }
+.tk-history-item-time { color: #999; font-size: 10px; margin-right: 6px; }
+.tk-history-item-success { color: #27ae60; font-weight: 500; }
+.tk-history-item-fail { color: #e74c3c; font-weight: 500; }
+.tk-history-item-detail { color: #555; margin-left: 4px; }
+
+/* 滚动条美化 */
+.tk-table-wrapper::-webkit-scrollbar,
+.tk-log-container::-webkit-scrollbar,
+.tk-history-container::-webkit-scrollbar { width: 5px; }
+.tk-table-wrapper::-webkit-scrollbar-track,
+.tk-log-container::-webkit-scrollbar-track,
+.tk-history-container::-webkit-scrollbar-track { background: transparent; }
+.tk-table-wrapper::-webkit-scrollbar-thumb,
+.tk-log-container::-webkit-scrollbar-thumb,
+.tk-history-container::-webkit-scrollbar-thumb { background: #ccc; border-radius: 3px; }

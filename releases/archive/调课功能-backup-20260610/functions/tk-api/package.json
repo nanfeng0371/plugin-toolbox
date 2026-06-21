@@ -1,0 +1,13 @@
+{
+  "name": "tk-api",
+  "version": "1.0.0",
+  "private": true,
+  "description": "调课助手云函数 API",
+  "main": "index.js",
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "busboy": "1.6.0",
+    "got": "^11.8.6",
+    "tcb-admin-node": "^1.3.5"
+  }
+}

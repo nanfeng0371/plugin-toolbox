@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>课程排期完整热力图</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: "Microsoft YaHei", "PingFang SC", -apple-system, "Segoe UI", sans-serif;
+    background: #f0f4f8;
+    color: #2c3e50;
+    min-height: 100vh;
+  }
+  .fs-header {
+    background: linear-gradient(135deg, #1565c0 0%, #1976d2 50%, #1e88e5 100%);
+    color: #fff;
+    padding: 16px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    box-shadow: 0 2px 8px rgba(25,118,210,0.3);
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+  .fs-header h1 { font-size: 18px; font-weight: 700; letter-spacing: 0.3px; }
+  .fs-header-right { display: flex; align-items: center; gap: 16px; }
+  .fs-date-info { font-size: 13px; opacity: 0.85; }
+  .fs-close-btn {
+    background: rgba(255,255,255,0.18);
+    border: 1px solid rgba(255,255,255,0.35);
+    color: #fff;
+    padding: 6px 16px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 600;
+    transition: background 0.15s;
+    font-family: inherit;
+  }
+  .fs-close-btn:hover { background: rgba(255,255,255,0.28); }
+
+  .fs-container { max-width: 1400px; margin: 0 auto; padding: 20px 24px; }
+
+  /* 统计 Badge 行 */
+  .fs-stats-row {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+  }
+  .fs-stat-badge {
+    background: #fff;
+    border-radius: 10px;
+    padding: 12px 18px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    border: 1px solid #e1e5e9;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    flex: 1;
+    min-width: 130px;
+    transition: box-shadow 0.15s;
+  }
+  .fs-stat-badge:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+  .fs-stat-badge-value {
+    font-size: 28px;
+    font-weight: 800;
+    line-height: 1;
+    letter-spacing: -1.5px;
+  }
+  .fs-stat-badge-label { font-size: 11px; color: #6b7a8a; font-weight: 500; margin-top: 3px; }
+
+  /* 热力图卡片 */
+  .fs-heatmap-card {
+    background: #fff;
+    border-radius: 10px;
+    border: 1px solid #e1e5e9;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    padding: 20px;
+    margin-bottom: 16px;
+    overflow-x: auto;
+  }
+  .fs-heatmap-title {
+    font-size: 14px;
+    font-weight: 700;
+    color: #1976d2;
+    margin-bottom: 16px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid #e8f0fe;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .fs-heatmap-subtitle {
+    font-size: 12px;
+    color: #6b7a8a;
+    font-weight: 400;
+  }
+  #fs-canvas {
+    display: block;
+    cursor: crosshair;
+    border-radius: 4px;
+  }
+
+  /* Tooltip */
+  .fs-tooltip {
+    position: fixed;
+    background: rgba(20, 30, 50, 0.92);
+    color: #fff;
+    font-size: 12px;
+    padding: 7px 12px;
+    border-radius: 6px;
+    pointer-events: none;
+    display: none;
+    z-index: 1000;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+    white-space: nowrap;
+    line-height: 1.5;
+  }
+
+  /* 选中信息 */
+  .fs-selected-info {
+    background: #fff8e1;
+    border: 1px solid #ffe082;
+    border-left: 4px solid #ffa000;
+    border-radius: 8px;
+    padding: 12px 16px;
+    margin-bottom: 16px;
+    font-size: 13px;
+    display: none;
+    animation: fs-slide-in 0.2s ease;
+  }
+  @keyframes fs-slide-in {
+    from { opacity: 0; transform: translateY(-4px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* 异常卡片 */
+  .fs-anomaly-card {
+    background: #fff;
+    border-radius: 10px;
+    border: 1px solid #e1e5e9;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    padding: 16px 20px;
+    margin-bottom: 16px;
+  }
+  .fs-anomaly-title {
+    font-size: 14px;
+    font-weight: 700;
+    color: #2c3e50;
+    margin-bottom: 12px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #edf0f3;
+  }
+  .fs-anomaly-list { display: flex; flex-direction: column; gap: 6px; }
+  .fs-anomaly-item {
+    padding: 9px 14px;
+    border-radius: 7px;
+    font-size: 13px;
+    line-height: 1.5;
+  }
+  .fs-severity-error { border-left: 4px solid #e53935; background: #fff5f5; color: #7f1d1d; }
+  .fs-severity-warning { border-left: 4px solid #f59e0b; background: #fffbf0; color: #78350f; }
+  .fs-severity-info { border-left: 4px solid #1976d2; background: #e3f0ff; color: #1259a1; }
+
+  /* 页脚 */
+  .fs-footer {
+    text-align: center;
+    color: #98a6b5;
+    font-size: 12px;
+    padding: 12px 0 28px;
+  }
+  .fs-legend {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 6px;
+  }
+  .fs-legend-bar {
+    width: 180px;
+    height: 12px;
+    border-radius: 6px;
+    background: linear-gradient(to right, #ffffff, #b3e5fc, #4fc3f7, #0288d1, #01579b);
+    border: 1px solid #d0d8e4;
+  }
+
+  /* 空状态 */
+  .fs-empty {
+    text-align: center;
+    padding: 80px 20px;
+    color: #98a6b5;
+    font-size: 16px;
+    line-height: 1.8;
+  }
+  .fs-empty-icon { font-size: 48px; margin-bottom: 16px; }
+
+  /* 响应式 */
+  @media (max-width: 768px) {
+    .fs-container { padding: 12px; }
+    .fs-stats-row { gap: 8px; }
+    .fs-stat-badge { min-width: 80px; padding: 10px 12px; }
+    .fs-stat-badge-value { font-size: 22px; }
+    .fs-header { padding: 12px 16px; }
+    .fs-header h1 { font-size: 15px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="fs-header">
+  <h1>🗓️ 课程排期完整热力图</h1>
+  <div class="fs-header-right">
+    <span class="fs-date-info" id="fs-date-info">—</span>
+    <button class="fs-close-btn" onclick="window.close()">✕ 关闭</button>
+  </div>
+</div>
+
+<div class="fs-container">
+  <div id="fs-stats-row" class="fs-stats-row"></div>
+
+  <div class="fs-heatmap-card">
+    <div class="fs-heatmap-title">
+      📊 时段 × 星期 课量密度热力图
+      <span class="fs-heatmap-subtitle">（点击格子查看统计，鼠标悬停显示详情）</span>
+    </div>
+    <canvas id="fs-canvas"></canvas>
+  </div>
+
+  <div id="fs-selected-info" class="fs-selected-info"></div>
+  <div id="fs-anomaly-card" class="fs-anomaly-card" style="display:none;"></div>
+
+  <div class="fs-footer">
+    <div class="fs-legend">
+      <span>少</span>
+      <div class="fs-legend-bar"></div>
+      <span>多</span>
+    </div>
+    <div>颜色越深代表该时段课量越密集 · 斜线格子表示不允许排课的星期</div>
+  </div>
+</div>
+
+<div class="fs-tooltip" id="fs-tooltip"></div>
+
+<script src="heatmap-fullscreen.js"></script>
+</body>
+</html>

@@ -1,0 +1,596 @@
+/**
+ * 调课助手 - 移动端优先样式
+ * 复用 EduFlow 设计语言，适配手机端操作
+ */
+
+/* ========== CSS 变量 ========== */
+:root {
+  --tk-primary: #4f6ef7;
+  --tk-primary-dark: #3a56d4;
+  --tk-primary-light: #eef1ff;
+  --tk-success: #52c41a;
+  --tk-warning: #faad14;
+  --tk-danger: #ff4d4f;
+  --tk-bg: #f5f6fa;
+  --tk-card-bg: #ffffff;
+  --tk-text: #1a1a2e;
+  --tk-text-secondary: #666;
+  --tk-text-muted: #999;
+  --tk-border: #e8e8e8;
+  --tk-radius: 12px;
+  --tk-radius-sm: 8px;
+  --tk-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  --tk-safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* ========== Reset ========== */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--tk-text);
+  background: var(--tk-bg);
+  -webkit-text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent;
+  overflow-x: hidden;
+}
+
+#app {
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
+#app-root {
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
+/* ========== 登录页 ========== */
+.login-page {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  min-height: 100dvh;
+  padding: 24px 16px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.login-card {
+  width: 100%;
+  max-width: 380px;
+  background: var(--tk-card-bg);
+  border-radius: var(--tk-radius);
+  padding: 32px 24px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.12);
+}
+
+.login-header {
+  text-align: center;
+  margin-bottom: 28px;
+}
+
+.login-icon {
+  font-size: 48px;
+  margin-bottom: 8px;
+}
+
+.login-title {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--tk-text);
+}
+
+.login-subtitle {
+  font-size: 13px;
+  color: var(--tk-text-muted);
+  margin-top: 4px;
+}
+
+.login-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* ========== 表单元素 ========== */
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.form-label {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--tk-text-secondary);
+}
+
+.form-input {
+  width: 100%;
+  height: 44px;
+  padding: 0 14px;
+  border: 1px solid var(--tk-border);
+  border-radius: var(--tk-radius-sm);
+  font-size: 15px;
+  color: var(--tk-text);
+  background: var(--tk-card-bg);
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.form-input:focus {
+  border-color: var(--tk-primary);
+  box-shadow: 0 0 0 3px var(--tk-primary-light);
+}
+
+.form-input.input-valid {
+  border-color: var(--tk-success);
+  box-shadow: 0 0 0 3px rgba(82,196,26,0.1);
+}
+
+.form-input::placeholder {
+  color: var(--tk-text-muted);
+}
+
+.form-textarea {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid var(--tk-border);
+  border-radius: var(--tk-radius-sm);
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--tk-text);
+  background: var(--tk-card-bg);
+  outline: none;
+  resize: vertical;
+  min-height: 120px;
+  transition: border-color 0.2s;
+}
+
+.form-textarea:focus {
+  border-color: var(--tk-primary);
+  box-shadow: 0 0 0 3px var(--tk-primary-light);
+}
+
+.form-textarea::placeholder {
+  color: var(--tk-text-muted);
+  font-size: 13px;
+}
+
+.form-error {
+  color: var(--tk-danger);
+  font-size: 13px;
+  padding: 6px 0;
+}
+
+/* ========== 按钮 ========== */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 44px;
+  padding: 0 20px;
+  border: none;
+  border-radius: var(--tk-radius-sm);
+  font-size: 15px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-primary {
+  background: var(--tk-primary);
+  color: #fff;
+}
+
+.btn-primary:not(:disabled):active {
+  background: var(--tk-primary-dark);
+}
+
+.btn-secondary {
+  background: var(--tk-primary-light);
+  color: var(--tk-primary);
+}
+
+.btn-secondary:not(:disabled):active {
+  background: #dce3ff;
+}
+
+.btn-text {
+  background: none;
+  color: var(--tk-text-muted);
+  height: 36px;
+  font-size: 13px;
+}
+
+.btn-text:not(:disabled):active {
+  color: var(--tk-text);
+}
+
+.btn-block {
+  width: 100%;
+}
+
+.btn-row {
+  display: flex;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.btn-row .btn {
+  flex: 1;
+}
+
+/* ========== 主页布局 ========== */
+.main-page {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
+.main-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  background: #fff;
+  border-bottom: 1px solid var(--tk-border);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.header-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--tk-text);
+}
+
+/* ========== Token 状态条 ========== */
+.token-bar {
+  padding: 8px 16px;
+  background: #fff;
+  border-bottom: 1px solid var(--tk-border);
+}
+
+.token-status {
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.token-valid { color: var(--tk-success); }
+.token-expiring { color: var(--tk-warning); }
+.token-expired, .token-notset { color: var(--tk-danger); }
+.token-unknown { color: var(--tk-text-muted); }
+
+/* ========== Tab 导航 ========== */
+.tab-nav {
+  display: flex;
+  background: #fff;
+  border-bottom: 1px solid var(--tk-border);
+  position: sticky;
+  top: 52px;
+  z-index: 10;
+}
+
+.tab-btn {
+  flex: 1;
+  height: 44px;
+  border: none;
+  background: none;
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--tk-text-muted);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: all 0.2s;
+}
+
+.tab-btn.active {
+  color: var(--tk-primary);
+  border-bottom-color: var(--tk-primary);
+}
+
+/* ========== Tab 内容区 ========== */
+.tab-content {
+  flex: 1;
+  padding: 16px;
+  padding-bottom: calc(16px + var(--tk-safe-bottom));
+}
+
+/* ========== 通用 Section ========== */
+.section {
+  background: var(--tk-card-bg);
+  border-radius: var(--tk-radius);
+  padding: 16px;
+  margin-bottom: 12px;
+  box-shadow: var(--tk-shadow);
+}
+
+.section-label {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--tk-text);
+  margin-bottom: 12px;
+  display: block;
+}
+
+/* ========== 调课 Tab ========== */
+.token-guide {
+  background: #fff7e6;
+  border: 1px solid #ffe58f;
+  border-radius: var(--tk-radius-sm);
+  padding: 12px;
+  margin-bottom: 12px;
+}
+
+.guide-title {
+  font-weight: 600;
+  color: #d48806;
+  margin-bottom: 6px;
+  font-size: 14px;
+}
+
+.guide-steps {
+  font-size: 13px;
+  color: #8c6d1f;
+  line-height: 1.8;
+}
+
+.parse-summary, .execute-summary {
+  font-size: 14px;
+  font-weight: 600;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--tk-border);
+  margin-bottom: 8px;
+}
+
+.parse-list, .execute-list {
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.parse-item, .execute-item {
+  padding: 8px 0;
+  font-size: 13px;
+  border-bottom: 1px solid #f5f5f5;
+}
+
+.parse-item:last-child, .execute-item:last-child {
+  border-bottom: none;
+}
+
+.parse-item-ok { color: var(--tk-success); }
+.parse-item-err { color: var(--tk-danger); }
+.execute-item-ok { color: var(--tk-success); }
+.execute-item-err { color: var(--tk-danger); }
+
+.parse-error, .execute-error {
+  display: block;
+  font-size: 12px;
+  color: var(--tk-danger);
+  margin-top: 2px;
+}
+
+.result-error {
+  color: var(--tk-danger);
+  font-size: 14px;
+  padding: 12px 0;
+}
+
+.progress-loading {
+  text-align: center;
+  color: var(--tk-text-muted);
+  padding: 20px;
+}
+
+/* ========== 设置 Tab ========== */
+.token-status-card {
+  border-radius: var(--tk-radius-sm);
+  padding: 14px;
+  margin-bottom: 12px;
+}
+
+.card-valid {
+  background: #f6ffed;
+  border: 1px solid #b7eb8f;
+}
+
+.card-invalid {
+  background: #fff2f0;
+  border: 1px solid #ffccc7;
+}
+
+.token-status-text {
+  font-size: 15px;
+  font-weight: 500;
+}
+
+.token-guide-inline {
+  background: #fff7e6;
+  border: 1px solid #ffe58f;
+  border-radius: var(--tk-radius-sm);
+  padding: 10px 12px;
+  margin-bottom: 12px;
+  font-size: 13px;
+  color: #8c6d1f;
+}
+
+.token-actions {
+  margin-bottom: 12px;
+}
+
+.token-actions .btn {
+  text-decoration: none;
+}
+
+.token-paste-section {
+  margin-top: 8px;
+}
+
+.paste-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.paste-row .form-input {
+  flex: 1;
+}
+
+.paste-row .btn {
+  flex-shrink: 0;
+  height: 44px;
+}
+
+/* ========== 学情表 ========== */
+.roster-status {
+  font-size: 14px;
+  padding: 6px 0;
+  margin-bottom: 8px;
+}
+
+.roster-loaded {
+  color: var(--tk-success);
+  font-weight: 500;
+}
+
+.roster-empty {
+  color: var(--tk-text-muted);
+}
+
+.roster-loading {
+  color: var(--tk-primary);
+}
+
+.roster-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.roster-detail {
+  font-size: 12px;
+  color: var(--tk-text-muted);
+  margin-top: 4px;
+}
+
+/* ========== 帮助内容 ========== */
+.help-content {
+  font-size: 13px;
+  color: var(--tk-text-secondary);
+  line-height: 1.8;
+}
+
+.help-content p {
+  margin-bottom: 6px;
+}
+
+.help-content ol {
+  padding-left: 20px;
+  margin-bottom: 8px;
+}
+
+.help-content li {
+  margin-bottom: 2px;
+}
+
+/* ========== 历史 Tab ========== */
+.search-row {
+  display: flex;
+  gap: 8px;
+}
+
+.search-row .form-input {
+  flex: 1;
+  height: 40px;
+}
+
+.search-row .btn {
+  flex-shrink: 0;
+  height: 40px;
+}
+
+.history-total {
+  font-size: 13px;
+  color: var(--tk-text-muted);
+  margin-bottom: 10px;
+}
+
+.history-group {
+  margin-bottom: 16px;
+}
+
+.history-date {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--tk-primary);
+  padding: 4px 8px;
+  background: var(--tk-primary-light);
+  border-radius: 4px;
+  margin-bottom: 6px;
+  display: inline-block;
+}
+
+.history-item {
+  padding: 8px 0;
+  font-size: 13px;
+  border-bottom: 1px solid #f5f5f5;
+  line-height: 1.6;
+}
+
+.history-item:last-child {
+  border-bottom: none;
+}
+
+.history-time {
+  display: block;
+  font-size: 12px;
+  color: var(--tk-text-muted);
+}
+
+.empty, .loading {
+  text-align: center;
+  padding: 32px 0;
+  color: var(--tk-text-muted);
+  font-size: 14px;
+}
+
+/* ========== 响应式 ========== */
+@media (min-width: 768px) {
+  .login-card {
+    padding: 40px 32px;
+  }
+
+  .tab-content {
+    max-width: 600px;
+    margin: 0 auto;
+  }
+}
+
+/* ========== 动画 ========== */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.section {
+  animation: fadeIn 0.3s ease;
+}

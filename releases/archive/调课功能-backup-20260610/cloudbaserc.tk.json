@@ -1,0 +1,43 @@
+{
+  "envId": "renewal-calendar-7ff2rtj4f876144",
+  "version": "2.0",
+  "regions": ["ap-shanghai"],
+  "functionProfile": {
+    "timeout": 60,
+    "memorySize": 256
+  },
+  "functions": [
+    {
+      "name": "ef-api",
+      "timeout": 60,
+      "memorySize": 256,
+      "handler": "index.main",
+      "runtime": "Nodejs18.15",
+      "installDependency": true
+    },
+    {
+      "name": "ef-cron",
+      "timeout": 30,
+      "memorySize": 128,
+      "handler": "index.main",
+      "runtime": "Nodejs18.15",
+      "installDependency": true
+    },
+    {
+      "name": "tk-api",
+      "timeout": 60,
+      "memorySize": 256,
+      "handler": "index.main",
+      "runtime": "Nodejs18.15",
+      "installDependency": true
+    }
+  ],
+  "hosting": {
+    "staticIgnore": [
+      ".gitignore",
+      "node_modules",
+      ".env",
+      "documents"
+    ]
+  }
+}

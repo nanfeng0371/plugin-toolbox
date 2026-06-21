@@ -1,0 +1,16 @@
+{
+  "name": "updater",
+  "label": "🔄 检查更新",
+  "version": "1.0.0",
+  "icon": "",
+  "description": "自动检测并安装插件更新，通过 Native Host 与本地通信",
+  "permissions": [
+    "nativeMessaging"
+  ],
+  "hasBackground": true,
+  "entry": {
+    "content": "content.js",
+    "css": "style.css"
+  },
+  "enabled": true
+}

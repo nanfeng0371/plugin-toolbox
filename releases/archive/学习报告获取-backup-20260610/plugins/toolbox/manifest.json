@@ -1,0 +1,43 @@
+{
+  "manifest_version": 3,
+  "name": "插件工作箱",
+  "version": "1.0.0",
+  "description": "辅导老师统一工作入口：学习报告、调课助手、钉钉提取等插件一站式管理",
+  "permissions": [
+    "activeTab",
+    "storage",
+    "scripting"
+  ],
+  "host_permissions": [
+    "https://ai-genesis.yuaiweiwu.com/*",
+    "https://s1.aiv5.cc/*",
+    "https://next.aitutor100.com/*"
+  ],
+  "action": {
+    "default_title": "插件工作箱",
+    "default_popup": "popup.html"
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"],
+      "css": ["panel.css"],
+      "run_at": "document_idle"
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["modules/*", "icons/*"],
+      "matches": ["<all_urls>"]
+    }
+  ],
+  "icons": {
+    "16": "icons/icon16.png",
+    "32": "icons/icon32.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  }
+}

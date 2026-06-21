@@ -1,0 +1,18 @@
+## Task Dependency Graph - Toolbox Phase2
+
+```mermaid
+graph TD
+    T01["T01: Shell 壳核心 + 模块框架<br/>12 个文件 | P0"]
+    T02["T02: Report 模块迁移<br/>4 个文件 | P0"]
+    T03["T03: Dingtalk 模块迁移<br/>3 个文件 | P0"]
+    T04["T04: P1 增强（权限+错误+主题）<br/>4 个文件 | P1"]
+
+    T01 -->|"依赖"| T02
+    T01 -->|"依赖"| T03
+    T01 -->|"依赖"| T04
+
+    style T01 fill:#4f46e5,color:#fff,stroke:#3730a3,stroke-width:2px
+    style T02 fill:#059669,color:#fff,stroke:#047857,stroke-width:2px
+    style T03 fill:#059669,color:#fff,stroke:#047857,stroke-width:2px
+    style T04 fill:#d97706,color:#fff,stroke:#b45309,stroke-width:2px
+```

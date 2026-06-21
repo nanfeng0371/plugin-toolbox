@@ -1,0 +1,222 @@
+/* ===== 学习报告分析面板 — 模块化版（Shadow DOM 内部样式）===== */
+
+/*
+ * 变更说明（v5.2.0 模块化迁移）：
+ *   - 移除 .lrp-container 的 position:fixed / right:0 / z-index / box-shadow / border-left（壳侧边栏已提供）
+ *   - 移除 .lrp-toggle 的 position:absolute / left:-28px / z-index（壳不需要外部切换按钮）
+ *   - 移除 .lrp-collapsed 的 width:0 hack（壳通过 display 切换面板）
+ *   - 新增 .lrp-module-container 作为 Shadow DOM 内 flex 根容器
+ *   - 保留所有内部组件样式不变
+ */
+
+/* 模块根容器（Shadow DOM 内的 flex 根） */
+.lrp-module-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+  font-family: -apple-system, "Microsoft YaHei", "Segoe UI", sans-serif;
+  font-size: 12px;
+  color: #333;
+}
+
+/* 头部 */
+.lrp-header {
+  background: linear-gradient(135deg, #1a73e8, #0d47a1);
+  color: white;
+  padding: 12px 16px;
+  flex-shrink: 0;
+}
+.lrp-header h1 { font-size: 15px; font-weight: 600; margin-bottom: 6px; }
+.lrp-status {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 11px; opacity: 0.9;
+}
+.lrp-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.lrp-dot.green { background: #34a853; }
+.lrp-dot.red { background: #ea4335; }
+.lrp-dot.yellow { background: #fbbc04; }
+.lrp-dot.grey { background: #9aa0a6; }
+.lrp-dot.blue { background: #1a73e8; animation: pulse 1s infinite; }
+@keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
+
+/* 工具栏 */
+.lrp-toolbar {
+  padding: 8px 12px;
+  background: #fff;
+  border-bottom: 1px solid #e0e0e0;
+  display: flex; gap: 8px; flex-wrap: wrap;
+  flex-shrink: 0;
+}
+
+.lrp-btn {
+  padding: 6px 14px;
+  border: 1px solid #dadce0;
+  border-radius: 4px;
+  background: #fff;
+  color: #202124;
+  cursor: pointer;
+  font-size: 12px;
+  transition: all 0.15s;
+  display: inline-flex; align-items: center; gap: 4px;
+}
+.lrp-btn:hover { background: #f1f3f4; border-color: #ccc; }
+.lrp-btn.primary { background: #1a73e8; color: white; border-color: #1a73e8; }
+.lrp-btn.primary:hover { background: #1557b0; }
+.lrp-btn.danger { background: #ea4335; color: white; border-color: #ea4335; }
+.lrp-btn.danger:hover { background: #c5221f; }
+.lrp-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* 筛选栏 */
+.lrp-filter-bar {
+  padding: 8px 12px;
+  background: #fff;
+  border-bottom: 1px solid #e0e0e0;
+  display: flex; align-items: center; gap: 8px;
+  flex-shrink: 0; font-size: 11px;
+}
+.lrp-filter-bar select, .lrp-filter-bar input {
+  padding: 3px 6px;
+  border: 1px solid #dadce0;
+  border-radius: 4px;
+  font-size: 11px;
+}
+
+/* 表格区域 */
+.lrp-table-wrap {
+  flex: 1; overflow: auto;
+  background: #fff;
+}
+
+.lrp-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+  font-size: 11px;
+}
+.lrp-table thead { position: sticky; top: 0; z-index: 2; }
+.lrp-table th {
+  background: #e8eaed;
+  padding: 6px 8px;
+  text-align: left;
+  font-weight: 600;
+  border-bottom: 2px solid #ccc;
+  position: sticky; top: 0; z-index: 2;
+  cursor: pointer; user-select: none;
+  white-space: nowrap;
+}
+.lrp-table th:hover { background: #d5d9dd; }
+.lrp-table th .sort-arrow { margin-left: 4px; font-size: 10px; opacity: 0.5; }
+.lrp-table td {
+  padding: 5px 8px;
+  border-bottom: 1px solid #eee;
+  vertical-align: middle;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.lrp-table tr:nth-child(even) { background: #fafafa; }
+.lrp-table tr:hover { background: #e8f0fe; }
+
+/* 行颜色编码 */
+.lrp-row-danger { background: #fce8e6 !important; }
+.lrp-row-warning { background: #fef7e0 !important; }
+.lrp-row-success { background: #e6f4ea !important; }
+.lrp-row-danger:hover { background: #fad2cf !important; }
+.lrp-row-warning:hover { background: #feefc3 !important; }
+.lrp-row-success:hover { background: #ceead6 !important; }
+
+/* 标签badge */
+.lrp-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+.lrp-badge.danger { background: #fce8e6; color: #c5221f; }
+.lrp-badge.warning { background: #fef7e0; color: #b06000; }
+.lrp-badge.success { background: #e6f4ea; color: #137333; }
+.lrp-badge.info { background: #e8f0fe; color: #1967d2; }
+.lrp-badge.muted { background: #f1f3f4; color: #5f6368; }
+
+/* 百分比颜色 */
+.pct-low { color: #c5221f; font-weight: 600; }
+.pct-mid { color: #b06000; font-weight: 500; }
+.pct-high { color: #137333; font-weight: 500; }
+
+/* 进度条 */
+.lrp-progress {
+  padding: 12px 16px;
+  background: #fff;
+  border-bottom: 1px solid #e0e0e0;
+  flex-shrink: 0;
+}
+.lrp-progress-bar {
+  height: 20px; background: #e8eaed; border-radius: 10px; overflow: hidden;
+}
+.lrp-progress-fill {
+  height: 100%; background: linear-gradient(90deg, #1a73e8, #34a853);
+  transition: width 0.3s;
+  display: flex; align-items: center; justify-content: center;
+  min-width: 40px;
+}
+.lrp-progress-text { font-size: 11px; color: white; font-weight: 500; }
+.lrp-progress-info { font-size: 11px; color: #5f6368; margin-top: 6px; }
+
+/* 底部统计栏 */
+.lrp-stats {
+  padding: 8px 16px;
+  background: #e8eaed;
+  border-top: 1px solid #dadce0;
+  display: flex; justify-content: space-between;
+  flex-shrink: 0; font-size: 11px; color: #5f6368;
+}
+.lrp-stats strong { color: #202124; }
+
+/* 日志区 */
+.lrp-log-area {
+  padding: 8px 12px;
+  background: #263238; color: #80cbc4; font-family: 'Cascadia Code', Consolas, monospace;
+  font-size: 11px; max-height: 160px; overflow-y: auto;
+  flex-shrink: 0;
+  border-top: 1px solid #37474f;
+  margin-top: 4px;
+}
+.lrp-log-entry { margin-bottom: 2px; line-height: 1.5; }
+.lrp-log-entry.error { color: #ef5350; }
+.lrp-log-entry.ok { color: #a5d6a7; }
+.lrp-log-entry.info { color: #90caf9; }
+
+/* 日志按钮行 */
+#lrpLogBtnRow {
+  padding: 4px 8px;
+  gap: 4px;
+  flex-wrap: wrap;
+  flex-shrink: 0;
+  border-top: 1px solid #e8eaed;
+}
+.lrp-btn.small { font-size: 11px; padding: 3px 8px; }
+
+/* 空状态 */
+.lrp-empty {
+  padding: 60px 20px;
+  text-align: center; color: #5f6368;
+}
+.lrp-empty-icon { font-size: 48px; margin-bottom: 12px; }
+.lrp-empty p { font-size: 13px; margin-top: 8px; }
+
+/* 滚动条美化 */
+.lrp-table-wrap::-webkit-scrollbar, .lrp-log-area::-webkit-scrollbar { width: 6px; }
+.lrp-table-wrap::-webkit-scrollbar-thumb, .lrp-log-area::-webkit-scrollbar-thumb { background: #bbb; border-radius: 3px; }
+
+/* 悬停提示 */
+[data-tooltip] { position: relative; }
+[data-tooltip]:hover::after {
+  content: attr(data-tooltip);
+  position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%);
+  background: #323232; color: #fff; padding: 4px 8px;
+  border-radius: 4px; font-size: 11px; white-space: nowrap;
+  z-index: 10; margin-bottom: 4px; pointer-events: none;
+}

@@ -1,0 +1,25 @@
+# 私钥文件（绝对不能推送到 GitHub！）
+key.pem
+
+# 打包产物（只保留最新版，用 GitHub Releases 备份）
+dist/extensions/toolbox/*.crx
+dist/extensions/toolbox/*.zip
+
+# Node 模块
+node_modules/
+
+# 系统文件
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# 调试/临时文件
+nul
+*.log
+deploy-log.txt
+
+# WorkBuddy 内部文件
+.workbuddy/
+.check-server-update.json
+.mcp-final-check.json
+.mcp-server-update.json

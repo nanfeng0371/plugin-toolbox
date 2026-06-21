@@ -1,0 +1,104 @@
+{
+  "manifest_version": 3,
+  "name": "插件工作箱",
+  "version": "2.2.78",
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEArrtgYsAJvUwDws7+KgwlAuFcKfM/UQHOJelddUOsgQCi77jpf/37f1EAc6hny2eTwhXYonMaNW0HON8WOFmHXTh8sIN/XjzVhyMkYFgPpo1Nw5+q8gooal96kBRJNaGm/xVV4LQdWVNysHWeSFYBxuSXf4SvkK0FXlxMCKi/ygIJMw8KYBc511+BhfAX70yuoVrOiIUK7ggSUe+O8lHVBJ+s+wpnSwWaaesyoMMteUfhApY/bHmNsQ8Y2/Xc0RuAnW8nxK+csnUHz3mm1Dh/Aw/xBpEhucQLM4dRKwFPO6FkTRh4iFc5VorqhPTym20HHZUs1Q1Suk39HfvE2R8/4QIDAQAB",
+  "update_url": "https://renewal-calendar-7ff2rtj4f876144-1259283480.tcloudbaseapp.com/extensions/toolbox/update.xml",
+  "description": "辅导老师统一工作入口：学习报告、页面表格提取、调课助手等插件一站式管理",
+  "permissions": [
+    "activeTab",
+    "storage",
+    "scripting",
+    "cookies",
+    "downloads",
+    "nativeMessaging"
+  ],
+  "optional_permissions": [],
+  "host_permissions": [
+    "https://ai-genesis.yuaiweiwu.com/*",
+    "https://s1.aiv5.cc/*",
+    "https://next.aitutor100.com/*",
+    "https://*.aitutor100.com/*"
+  ],
+  "action": {
+    "default_title": "插件工作箱",
+    "default_popup": "popup.html"
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "<all_urls>"
+      ],
+      "js": [
+        "content.js"
+      ],
+      "css": [
+        "panel.css"
+      ],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://next.aitutor100.com/reportV2.html*"
+      ],
+      "js": [
+        "modules/report/report_fetcher.js"
+      ],
+      "run_at": "document_idle",
+      "all_frames": true
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "modules/dingtalk/content.js",
+        "modules/dingtalk/module.json",
+        "modules/dingtalk/style.css",
+        "modules/report/background.js",
+        "modules/report/content.js",
+        "modules/report/lib/xlsx.full.min.js",
+        "modules/report/module.json",
+        "modules/report/panel.css",
+        "modules/report/report_fetcher.js",
+        "modules/tiaoke/background.js",
+        "modules/tiaoke/content.js",
+        "modules/tiaoke/lib/xlsx.full.min.js",
+        "modules/tiaoke/module.json",
+        "modules/tiaoke/style.css",
+        "modules/updater/background.js",
+        "modules/updater/content.js",
+        "modules/updater/module.json",
+        "modules/updater/style.css",
+        "modules/heatmap/module.json",
+        "modules/heatmap/content.js",
+        "modules/heatmap/content.css",
+        "modules/heatmap/heatmap-fullscreen.html",
+        "modules/heatmap/heatmap-fullscreen.js",
+        "modules/heatmap/background.js",
+        "modules/dailyboard/module.json",
+        "modules/dailyboard/content.js",
+        "modules/dailyboard/content.css",
+        "modules/dailyboard/background.js",
+        "lib/cloudbase.full.js",
+        "lib/xlsx.full.min.js",
+        "icons/icon.svg",
+        "icons/icon16.png",
+        "icons/icon32.png",
+        "icons/icon48.png",
+        "icons/icon128.png"
+      ],
+      "matches": [
+        "<all_urls>"
+      ]
+    }
+  ],
+  "icons": {
+    "16": "icons/icon16.png",
+    "32": "icons/icon32.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  }
+}

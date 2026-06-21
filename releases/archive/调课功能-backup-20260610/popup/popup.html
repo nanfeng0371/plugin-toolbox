@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>调课助手</title>
+  <link rel="stylesheet" href="popup.css">
+  <script src="lib/xlsx.full.min.js"></script>
+</head>
+<body>
+  <div class="app">
+    <!-- 头部标题 -->
+    <header class="app-header">
+      <h1>📚 调课助手</h1>
+      <span class="version">v3.0</span>
+    </header>
+
+    <!-- Tab 切换 -->
+    <div class="tab-bar">
+      <button id="tab-main" class="tab-btn tab-active" data-tab="main">调课</button>
+      <button id="tab-history" class="tab-btn" data-tab="history">历史日志</button>
+    </div>
+
+    <!-- Tab 内容：调课 -->
+    <div id="panel-main" class="tab-panel tab-panel-active">
+
+    <!-- 连接状态 -->
+    <div id="connection-status" class="status-bar status-disconnected">
+      <span class="status-dot"></span>
+      <span class="status-text">未连接</span>
+    </div>
+
+    <!-- 学员信息簿 -->
+    <section class="roster-section">
+      <div class="roster-header">
+        <label class="section-label">📋 学员信息簿</label>
+        <span id="roster-status" class="roster-status">未加载</span>
+      </div>
+      <div class="roster-actions">
+        <input type="file" id="roster-file" accept=".xlsx,.xls" class="hidden">
+        <button id="btn-load-roster" class="btn btn-outline">选择Excel文件</button>
+        <button id="btn-clear-roster" class="btn btn-sm btn-outline hidden">清除</button>
+      </div>
+      <div class="input-hint">格式：姓名 | 手机号 | 学员ID（Sheet1第一行为表头）</div>
+    </section>
+
+    <!-- 数据输入区 -->
+    <section class="input-section">
+      <label class="section-label">粘贴调课数据</label>
+      <textarea
+        id="input-data"
+        placeholder="支持两种格式：&#10;&#10;格式1（结构化）：&#10;学员ID/姓名  第几讲  新日期  新时间&#10;320207  2  2026-06-01  14:00&#10;&#10;格式2（自然语言）：&#10;王一，第5讲，调到5月2日早上10点上课&#10;13400001234，第3讲，调到6月5号下午2点半"
+        rows="6"
+      ></textarea>
+      <div class="input-hint">
+        结构化：ID/姓名 | 第几讲 | 日期 | 时间 &nbsp;|&nbsp; 自然语言：姓名/手机号，第X讲，调到X月X日X点
+      </div>
+      <div id="parse-feedback" class="parse-feedback hidden"></div>
+      <button id="btn-parse" class="btn btn-primary">解析数据</button>
+    </section>
+
+    <!-- 预览表格区 -->
+    <section id="preview-section" class="preview-section hidden">
+      <label class="section-label">数据预览</label>
+      <div class="table-wrapper">
+        <table id="preview-table">
+          <thead>
+            <tr>
+              <th class="col-index">#</th>
+              <th class="col-id">学员ID</th>
+              <th class="col-lesson">第几讲</th>
+              <th class="col-date">新日期</th>
+              <th class="col-time">新时间</th>
+              <th class="col-status">状态</th>
+            </tr>
+          </thead>
+          <tbody id="preview-tbody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- 执行控制区 -->
+    <section id="control-section" class="control-section hidden">
+      <div class="control-buttons">
+        <button id="btn-start" class="btn btn-success">▶ 开始执行</button>
+        <button id="btn-pause" class="btn btn-warning" disabled>⏸ 暂停</button>
+        <button id="btn-retry" class="btn btn-info" disabled>🔄 重试失败</button>
+      </div>
+    </section>
+
+    <!-- 进度与统计区 -->
+    <section id="stats-section" class="stats-section hidden">
+      <div class="progress-bar-wrapper">
+        <div id="progress-bar" class="progress-bar" style="width: 0%"></div>
+      </div>
+      <div class="stats-row">
+        <span class="stat-item stat-total">总计: <b id="stat-total">0</b></span>
+        <span class="stat-item stat-success">✅ 成功: <b id="stat-success">0</b></span>
+        <span class="stat-item stat-fail">❌ 失败: <b id="stat-fail">0</b></span>
+        <span class="stat-item stat-pending">⏳ 待执行: <b id="stat-pending">0</b></span>
+      </div>
+    </section>
+
+    <!-- 日志区 -->
+    <section id="log-section" class="log-section hidden">
+      <div class="log-header">
+        <label class="section-label">执行日志</label>
+        <button id="btn-export" class="btn btn-sm btn-outline">📥 导出结果</button>
+      </div>
+      <div id="log-container" class="log-container"></div>
+    </section>
+    </div><!-- /panel-main -->
+
+    <!-- Tab 内容：历史日志 -->
+    <div id="panel-history" class="tab-panel">
+      <div class="history-header">
+        <label class="section-label">📜 历史调课记录</label>
+        <button id="btn-clear-history" class="btn btn-sm btn-outline btn-danger">🗑️ 清空历史</button>
+      </div>
+      <div id="history-container" class="history-container">
+        <div class="history-empty">暂无历史记录</div>
+      </div>
+    </div>
+
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

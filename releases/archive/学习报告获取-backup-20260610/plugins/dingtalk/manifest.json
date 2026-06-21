@@ -1,0 +1,23 @@
+{
+  "manifest_version": 3,
+  "name": "钉钉数据提取助手",
+  "version": "1.0.1",
+  "description": "一键提取钉钉网页表格数据，支持自动滚动、智能去重、自动下载CSV",
+  "permissions": [
+    "activeTab",
+    "scripting",
+    "tabs",
+    "storage"
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "钉钉数据提取助手"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"],
+      "css": ["style.css"]
+    }
+  ]
+}

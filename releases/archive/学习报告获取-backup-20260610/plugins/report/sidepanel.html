@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>学习报告分析面板</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    width: 100%;
+    height: 100vh;
+    font-family: -apple-system, "Microsoft YaHei", "Segoe UI", sans-serif;
+    font-size: 12px;
+    background: #f5f5f5;
+    color: #333;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ===== Header ===== */
+  .header {
+    background: linear-gradient(135deg, #1a73e8, #0d47a1);
+    color: white;
+    padding: 12px 16px;
+    flex-shrink: 0;
+  }
+  .header h1 { font-size: 15px; font-weight: 600; margin-bottom: 6px; }
+  .status-bar {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 11px; opacity: 0.9;
+  }
+  .status-dot {
+    width: 8px; height: 8px; border-radius: 50%; display: inline-block;
+  }
+  .status-dot.connected { background: #4caf50; box-shadow: 0 0 6px #4caf50; }
+  .status-dot.disconnected { background: #f44336; }
+  .status-dot.working { background: #ff9800; animation: pulse 1s infinite; }
+  @keyframes pulse { 50% { opacity: 0.4; } }
+
+  /* ===== Toolbar ===== */
+  .toolbar {
+    background: white;
+    padding: 8px 12px;
+    border-bottom: 1px solid #ddd;
+    flex-shrink: 0;
+    display: flex; align-items: center; gap: 8px;
+    flex-wrap: wrap;
+  }
+  .toolbar select, .toolbar input[type="text"] {
+    border: 1px solid #ccc; border-radius: 4px;
+    padding: 4px 8px; font-size: 11px; outline: none;
+  }
+  .toolbar select:focus, .toolbar input:focus { border-color: #1a73e8; }
+  .btn {
+    padding: 5px 14px; border-radius: 4px; border: none; cursor: pointer;
+    font-size: 12px; font-weight: 500; white-space: nowrap;
+    transition: all 0.15s;
+  }
+  .btn-primary {
+    background: #1a73e8; color: white;
+  }
+  .btn-primary:hover { background: #1557b0; }
+  .btn-success { background: #2e7d32; color: white; }
+  .btn-success:hover { background: #1b5e20; }
+  .btn-secondary { background: #e0e0e0; color: #333; }
+  .btn-secondary:hover { background: #ccc; }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .btn-group { display: flex; gap: 4px; margin-left: auto; }
+
+  /* ===== Progress Bar ===== */
+  .progress-area {
+    background: #e3f2fd; padding: 8px 12px;
+    border-bottom: 1px solid #bbdefb; flex-shrink: 0;
+    display: none;
+  }
+  .progress-area.show { display: block; }
+  .progress-label {
+    font-size: 11px; color: #1565c0; margin-bottom: 4px;
+    display: flex; justify-content: space-between;
+  }
+  .progress-track {
+    width: 100%; height: 20px; background: #bbdefb; border-radius: 10px;
+    overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%; background: linear-gradient(90deg, #1a73e8, #42a5f5);
+    border-radius: 10px; transition: width 0.3s ease;
+    display: flex; align-items: center; justify-content: center;
+    color: white; font-size: 10px; font-weight: 600;
+    min-width: 40px;
+  }
+
+  /* ===== Table Container ===== */
+  .table-container {
+    flex: 1; overflow: auto; position: relative;
+  }
+  .table-container::-webkit-scrollbar { width: 8px; height: 8px; }
+  .table-container::-webkit-scrollbar-thumb { background: #bbb; border-radius: 4px; }
+  .table-container::-webkit-scrollbar-track { background: #f0f0f0; }
+
+  /* ===== Excel-style Table ===== */
+  table.data-table {
+    width: max-content; min-width: 100%; border-collapse: collapse;
+    font-size: 11px; table-layout: fixed;
+  }
+  table.data-table th {
+    position: sticky; top: 0; z-index: 10;
+    background: #1565c0; color: white; font-weight: 500;
+    padding: 7px 8px; text-align: center;
+    border-right: 1px solid #0d47a1; border-bottom: 2px solid #0d47a1;
+    white-space: nowrap; user-select: none; cursor: pointer;
+    min-width: 60px;
+  }
+  table.data-table th:hover { background: #1976d2; }
+  table.data-table th.sorted-asc::after { content: ' ▲'; font-size: 9px; }
+  table.data-table th.sorted-desc::after { content: ' ▼'; font-size: 9px; }
+  table.data-table th:first-child {
+    position: sticky; left: 0; z-index: 12;
+    min-width: 40px;
+  }
+  table.data-table th:nth-child(2) {
+    position: sticky; left: 40px; z-index: 11;
+    min-width: 56px;
+  }
+  table.data-table td {
+    padding: 5px 8px; border-bottom: 1px solid #eee;
+    border-right: 1px solid #f0f0f0; text-align: center;
+    white-space: nowrap; vertical-align: middle;
+    max-width: 120px; overflow: hidden; text-overflow: ellipsis;
+  }
+  table.data-table td:first-child {
+    position: sticky; left: 0; z-index: 5;
+    background: white;
+    font-weight: 500; text-align: center; min-width: 40px;
+  }
+  table.data-table td:nth-child(2) {
+    position: sticky; left: 40px; z-index: 5;
+    background: white; font-weight: 500; min-width: 56px;
+  }
+  table.data-table td.text-left { text-align: left !important; }
+  table.data-table td.number { text-align: right; font-variant-numeric: tabular-nums; }
+
+  /* Row colors by status */
+  tr.row-danger > td { background: #ffebee; }       /* 敷衍预警 */
+  tr.row-warning > td:not(:first-child):not(:nth-child(2)) { background: #fff3e0; } /* 需关注 */
+  tr.row-success > td:not(:first-child):not(:nth-child(2)) { background: #e8f5e9; }   /* 优秀 */
+  tr.row-normal > td { background: white; }
+  tr.row-danger:hover > td,
+  tr.row-warning:hover > td:not(:first-child):not(:nth-child(2)),
+  tr.row-success:hover > td:not(:first-child):not(:nth-child(2)) { filter: brightness(0.97); }
+  tr:hover > td:first-child, tr:hover > td:nth-child(2) { background: #f5f5f5 !important; }
+
+  /* Cell highlight styles for key columns */
+  .badge-tag {
+    display: inline-block; padding: 2px 6px; border-radius: 3px;
+    font-size: 10px; font-weight: 600; line-height: 1.4;
+  }
+  .tag-excellent { background: #c8e6c9; color: #1b5e20; }      /* ⭐优秀 */
+  .tag-good { background: #bbdefb; color: #0d47a1; }            /* 👍认真/正常 */
+  .tag-warn { background: #ffe082; color: #e65100; }            /* ⚠️需关注 */
+  .tag-danger { background: #ffcdd2; color: #b71c1c; }          /* 🚨敷衍 */
+  .tag-critical { background: #b71c1c; color: white; }           /* ❌严重 */
+
+  .pct-low { color: #b71c1c; font-weight: 600; }
+  .pct-mid { color: #e65100; }
+  .pct-high { color: #2e7d32; font-weight: 600; }
+
+  /* Empty state */
+  .empty-state {
+    display: flex; flex-direction: column; align-items: center;
+    justify-content: center; height: 100%; color: #999;
+  }
+  .empty-state .icon { font-size: 48px; margin-bottom: 12px; }
+  .empty-state p { font-size: 13px; }
+
+  /* Stats bar at bottom */
+  .stats-bar {
+    background: white; border-top: 1px solid #ddd;
+    padding: 6px 12px; flex-shrink: 0;
+    display: flex; gap: 16px; font-size: 11px; flex-wrap: wrap;
+  }
+  .stat-item { display: flex; align-items: center; gap: 4px; }
+  .stat-value { font-weight: 700; color: #1a73e8; }
+  .stat-label { color: #666; }
+
+  /* Tooltip */
+  .cell-tooltip {
+    position: fixed; z-index: 9999; background: #333; color: white;
+    padding: 6px 10px; border-radius: 4px; font-size: 11px;
+    max-width: 280px; pointer-events: none; display: none;
+    word-break: break-all; line-height: 1.5;
+  }
+
+  /* Column visibility toggle */
+  .col-vis-btn {
+    background: none; border: 1px solid #ccc;
+    padding: 2px 6px; border-radius: 3px; cursor: pointer; font-size: 10px;
+  }
+</style>
+</head>
+<body>
+
+<!-- ===== Header ===== -->
+<div class="header">
+  <h1>📊 学习报告批量分析</h1>
+  <div class="status-bar">
+    <span class="status-dot disconnected" id="statusDot"></span>
+    <span id="statusText">检测连接状态中...</span>
+    <span style="margin-left:auto">|</span>
+    <span id="studentCount">学生数：--</span>
+  </div>
+</div>
+
+<!-- ===== Toolbar ===== -->
+<div class="toolbar" id="toolbar">
+  <select id="filterTag" title="按标签筛选">
+    <option value="">全部标签</option>
+    <option value="danger">🚨 敷衍预警</option>
+    <option value="warning">⚠️ 需关注</option>
+    <option value="success">⭐ 优秀</option>
+    <option value="normal">👍 正常参与</option>
+  </select>
+  <input type="text" id="searchName" placeholder="搜索学生姓名..." style="width:110px">
+  <button class="btn btn-primary" id="btnFetch">🚀 批量获取分析</button>
+  <div class="btn-group">
+    <button class="btn btn-success" id="btnExport" disabled>⬇️ 下载Excel</button>
+    <button class="btn btn-secondary" id="btnCopyList">📋 复制问题名单</button>
+  </div>
+</div>
+
+<!-- ===== Progress ===== -->
+<div class="progress-area" id="progressArea">
+  <div class="progress-label">
+    <span id="progressText">正在获取数据...</span>
+    <span id="progressPct">0%</span>
+  </div>
+  <div class="progress-track">
+    <div class="progress-fill" id="progressFill" style="width:0%">0/0</div>
+  </div>
+</div>
+
+<!-- ===== Data Table ===== -->
+<div class="table-container" id="tableContainer">
+  <div class="empty-state" id="emptyState">
+    <div class="icon">📋</div>
+    <p>点击「批量获取分析」开始</p>
+    <p style="font-size:11px;color:#bbb;margin-top:4px">将自动从工作台获取所有学生报告数据</p>
+  </div>
+  <table class="data-table" id="dataTable" style="display:none"></table>
+</div>
+
+<!-- ===== Stats Bar ===== -->
+<div class="stats-bar" id="statsBar" style="display:none">
+  <div class="stat-item"><span class="stat-value" id="statTotal">0</span><span class="stat-label">总计</span></div>
+  <div class="stat-item"><span class="stat-value" id="statDanger" style="color:#b71c1c">0</span><span class="stat-label">敷衍预警</span></div>
+  <div class="stat-item"><span class="stat-value" id="statWarn" style="color:#e65100">0</span><span class="stat-label">需关注</span></div>
+  <div class="stat-item"><span class="stat-value" id="statSuccess" style="color:#2e7d32">0</span><span class="stat-label">优秀</span></div>
+  <div class="stat-item"><span class="stat-value" id="statAvgRate">--</span><span class="stat-label">平均回答率</span></div>
+</div>
+
+<!-- Tooltip element -->
+<div class="cell-tooltip" id="tooltip"></div>
+
+<script src="analysis.js"></script>
+<script src="sidepanel.js"></script>
+</body>
+</html>

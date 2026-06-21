@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gupdate xmlns="http://www.google.com/update2/response" protocol="2.0">
+  <app appid="report-fetcher">
+    <updatecheck
+      codebase="https://renewal-calendar-7ff2rtj4f876144-1259283480.tcloudbaseapp.com/extensions/report-fetcher/report-fetcher-v5.1.1.crx"
+      version="5.1.1"
+      hash_sha256="091d7da4035489dd3cc5f137325ae57bf89d647fe4be35d6bb425f3147ecfb46"
+      status="ok" />
+  </app>
+</gupdate>
