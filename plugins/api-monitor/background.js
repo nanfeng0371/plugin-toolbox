@@ -9,15 +9,40 @@ chrome.runtime.onMessage.addListener(function (msg, sender, sendResponse) {
     return false;
   }
   if (msg.action === 'GET_REQUESTS') {
-    getRequests().then(sendResponse).catch(() => sendResponse({ requests: [] }));
+    getRequests().then(sendResponse).catch(function () { sendResponse({ requests: [] }); });
     return true;
   }
   if (msg.action === 'CLEAR_REQUESTS') {
-    clearRequests().then(() => sendResponse({ ok: true }));
+    clearRequests().then(function () { sendResponse({ ok: true }); });
     return true;
   }
   if (msg.action === 'EXPORT_JSON') {
-    getRequests().then(function (r) { sendResponse(r); }).catch(() => sendResponse({ requests: [] }));
+    getRequests().then(function (r) { sendResponse(r); }).catch(function () { sendResponse({ requests: [] }); });
+    return true;
+  }
+  // 🆕 DOM 快照
+  if (msg.action === 'DOM_SNAPSHOT') {
+    saveSnapshot(msg.data);
+    return false;
+  }
+  // 🆕 录制状态
+  if (msg.action === 'RECORDING_STATUS') {
+    chrome.storage.local.set({ __api_monitor_recording__: msg.data });
+    return false;
+  }
+  // 🆕 录制数据
+  if (msg.action === 'RECORDING_DATA') {
+    saveRecording(msg.data);
+    return false;
+  }
+  // 🆕 获取诊断报告
+  if (msg.action === 'GET_DIAG_REPORT') {
+    getDiagReport().then(sendResponse);
+    return true;
+  }
+  // 🆕 清空诊断数据
+  if (msg.action === 'CLEAR_DIAG_DATA') {
+    clearDiagData().then(function () { sendResponse({ ok: true }); });
     return true;
   }
 });
@@ -45,4 +70,63 @@ async function getRequests() {
 
 async function clearRequests() {
   await chrome.storage.local.remove(['__api_monitor_requests__']);
+}
+
+// ==========================================
+// 🆕 DOM 快照存储
+// ==========================================
+async function saveSnapshot(snapshot) {
+  try {
+    var result = await chrome.storage.local.get(['__api_monitor_snapshots__']);
+    var arr = result.__api_monitor_snapshots__ || [];
+    arr.unshift(snapshot);
+    if (arr.length > 10) arr = arr.slice(0, 10); // 最多保留10个快照
+    await chrome.storage.local.set({ __api_monitor_snapshots__: arr });
+  } catch (e) {
+    console.warn('[API Monitor] saveSnapshot failed:', e.message);
+  }
+}
+
+// ==========================================
+// 🆕 录制数据存储
+// ==========================================
+async function saveRecording(recData) {
+  try {
+    var result = await chrome.storage.local.get(['__api_monitor_recordings__']);
+    var arr = result.__api_monitor_recordings__ || [];
+    arr.unshift(recData);
+    if (arr.length > 5) arr = arr.slice(0, 5); // 最多保留5次录制
+    await chrome.storage.local.set({ __api_monitor_recordings__: arr });
+  } catch (e) {
+    console.warn('[API Monitor] saveRecording failed:', e.message);
+  }
+}
+
+// ==========================================
+// 🆕 诊断报告生成
+// ==========================================
+async function getDiagReport() {
+  try {
+    var result = await chrome.storage.local.get([
+      '__api_monitor_snapshots__',
+      '__api_monitor_recordings__',
+      '__api_monitor_requests__'
+    ]);
+    return {
+      snapshots: result.__api_monitor_snapshots__ || [],
+      recordings: result.__api_monitor_recordings__ || [],
+      requests: result.__api_monitor_requests__ || [],
+      exportedAt: new Date().toISOString()
+    };
+  } catch (e) {
+    return { snapshots: [], recordings: [], requests: [], error: e.message };
+  }
+}
+
+async function clearDiagData() {
+  await chrome.storage.local.remove([
+    '__api_monitor_snapshots__',
+    '__api_monitor_recordings__',
+    '__api_monitor_recording__'
+  ]);
 }

@@ -50,6 +50,13 @@
     $('btnExportAll').onclick = exportAllJSON;
     $('btnTestFetch').onclick = runTestFetch;
     $('btnCloseOrigin').onclick = closeOriginPanel;
+    // 🆕 诊断按钮
+    $('btnScanDom').onclick = scanDOM;
+    $('btnStartRecord').onclick = startRecording;
+    $('btnStopRecord').onclick = stopRecording;
+    $('btnGenReport').onclick = generateReport;
+    $('btnCloseDiag').onclick = closeDiagPanel;
+    $('btnExportDiag').onclick = exportDiagData;
     $('filterInput').oninput = function () {
       _filterUrl = this.value.trim().toLowerCase();
       renderList();
@@ -141,7 +148,7 @@
       _meta: {
         exportTime: new Date().toISOString(),
         totalRequests: enriched.length,
-        tool: 'API 接口监听器 v1.1.0'
+        tool: 'API 接口监听器 v1.3.0'
       },
       _urlStats: urlStatsSorted,
       requests: enriched
@@ -382,6 +389,284 @@
     } catch (e) {
       return htmlEscape(body);
     }
+  }
+
+  // ==========================================
+  // 🆕 v1.3.0: 诊断功能
+  // ==========================================
+
+  // 发送命令到当前标签页
+  async function sendToActiveTab(action, extra) {
+    try {
+      var tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+      if (!tabs[0]) return null;
+      var msg = Object.assign({ action: action }, extra || {});
+      return await chrome.tabs.sendMessage(tabs[0].id, msg);
+    } catch (e) {
+      return null;
+    }
+  }
+
+  // 🔍 扫描页面 DOM
+  async function scanDOM() {
+    var btn = $('btnScanDom');
+    var origText = btn.textContent;
+    btn.textContent = '⏳ 扫描中...';
+    btn.disabled = true;
+
+    await sendToActiveTab('SCAN_DOM');
+
+    // 等一会儿让快照存到 storage
+    setTimeout(async function () {
+      btn.textContent = '✅ 已扫描';
+      btn.disabled = false;
+      setTimeout(function () { btn.textContent = origText; }, 1500);
+      // 自动展示快照
+      await showSnapshots();
+    }, 500);
+  }
+
+  // 展示 DOM 快照
+  async function showSnapshots() {
+    var result = await chrome.storage.local.get(['__api_monitor_snapshots__']);
+    var snapshots = result.__api_monitor_snapshots__ || [];
+    if (snapshots.length === 0) {
+      showDiagPanel('🔍 DOM 扫描', '<div style="padding:10px;color:#999;">暂无快照，请先点击"扫描页面"</div>');
+      return;
+    }
+    var snap = snapshots[0];
+    var html = '';
+    // 框架检测
+    var framework = '';
+    if (snap.hasReact) framework += '<span class="badge-react">React</span> ';
+    if (snap.hasVue) framework += '<span class="badge-vue">Vue</span> ';
+    html += '<div class="diag-section"><strong>页面：</strong>' + htmlEscape(snap.title || '') + '<br><small>' + htmlEscape(snap.url || '') + '</small><br>' +
+      '<small>框架：' + (framework || '无检测') + ' | 时间：' + (snap.time || '') + '</small></div>';
+
+    // 表格信息
+    if (snap.tables && snap.tables.length > 0) {
+      html += '<div class="diag-section"><h5>📊 表格 (' + snap.tables.length + '个)</h5>';
+      snap.tables.forEach(function (t) {
+        html += '<table><tr><th>#</th><th>行数</th><th>列数</th><th>表头</th></tr>';
+        html += '<tr><td>' + (t.index + 1) + '</td><td>' + t.rowCount + '</td><td>' + (t.colCount || '?') + '</td><td>' + htmlEscape((t.headers || []).join(' | ') || '(无th)') + '</td></tr></table>';
+        if (t.sampleRow) {
+          html += '<small>首行示例：' + htmlEscape(t.sampleRow.join(' | ')) + '</small><br>';
+        }
+        if (t.rowElements) {
+          html += '<small>行内元素：</small><pre>' + htmlEscape(JSON.stringify(t.rowElements, null, 1)) + '</pre>';
+        }
+        html += '<br>';
+      });
+      html += '</div>';
+    }
+
+    // 输入框信息
+    if (snap.inputs && snap.inputs.length > 0) {
+      html += '<div class="diag-section"><h5>✏️ 输入框 (' + snap.inputs.length + '个)</h5>';
+      html += '<table><tr><th>类型</th><th>class</th><th>name</th><th>placeholder</th><th>值</th></tr>';
+      snap.inputs.forEach(function (inp) {
+        html += '<tr><td>' + htmlEscape(inp.type || 'text') + '</td><td>' + htmlEscape(inp.className.substring(0, 30)) + '</td><td>' + htmlEscape(inp.name || '') + '</td><td>' + htmlEscape(inp.placeholder || '') + '</td><td>' + htmlEscape(inp.value || '') + '</td></tr>';
+      });
+      html += '</table></div>';
+    }
+
+    // 按钮信息
+    if (snap.buttons && snap.buttons.length > 0) {
+      html += '<div class="diag-section"><h5>🔘 按钮 (' + snap.buttons.length + '个)</h5>';
+      html += '<table><tr><th>文字</th><th>class</th><th>类型</th></tr>';
+      snap.buttons.forEach(function (b) {
+        html += '<tr><td>' + htmlEscape(b.text) + '</td><td>' + htmlEscape(b.className.substring(0, 30)) + '</td><td>' + htmlEscape(b.type || b.tag) + '</td></tr>';
+      });
+      html += '</table></div>';
+    }
+
+    // 选择框
+    if (snap.selects && snap.selects.length > 0) {
+      html += '<div class="diag-section"><h5>📋 下拉框 (' + snap.selects.length + '个)</h5>';
+      html += '<table><tr><th>class</th><th>选项数</th><th>当前值</th></tr>';
+      snap.selects.forEach(function (s) {
+        html += '<tr><td>' + htmlEscape(s.className.substring(0, 30)) + '</td><td>' + s.optionCount + '</td><td>' + htmlEscape(s.value) + '</td></tr>';
+      });
+      html += '</table></div>';
+    }
+
+    // 文本框
+    if (snap.textareas && snap.textareas.length > 0) {
+      html += '<div class="diag-section"><h5>📝 文本框 (' + snap.textareas.length + '个)</h5>';
+      html += '<table><tr><th>class</th><th>placeholder</th></tr>';
+      snap.textareas.forEach(function (ta) {
+        html += '<tr><td>' + htmlEscape(ta.className.substring(0, 30)) + '</td><td>' + htmlEscape(ta.placeholder || '') + '</td></tr>';
+      });
+      html += '</table></div>';
+    }
+
+    showDiagPanel('🔍 DOM 扫描 — ' + htmlEscape(snap.title || ''), html);
+  }
+
+  // ⏺ 开始录制
+  async function startRecording() {
+    var resp = await sendToActiveTab('START_RECORDING');
+    if (resp && resp.ok) {
+      $('btnStartRecord').disabled = true;
+      $('btnStopRecord').disabled = false;
+      $('recordingBar').style.display = 'flex';
+      // 启动计时器
+      _recStartTime = Date.now();
+      _recTimer = setInterval(updateRecTime, 500);
+    }
+  }
+
+  var _recStartTime = 0;
+  var _recTimer = 0;
+
+  function updateRecTime() {
+    var elapsed = Math.floor((Date.now() - _recStartTime) / 1000);
+    var min = Math.floor(elapsed / 60);
+    var sec = elapsed % 60;
+    var el = $('recTime');
+    if (el) el.textContent = (min < 10 ? '0' + min : min) + ':' + (sec < 10 ? '0' + sec : sec);
+  }
+
+  // ⏹ 停止录制
+  async function stopRecording() {
+    await sendToActiveTab('STOP_RECORDING');
+    $('btnStartRecord').disabled = false;
+    $('btnStopRecord').disabled = true;
+    $('recordingBar').style.display = 'none';
+    if (_recTimer) { clearInterval(_recTimer); _recTimer = 0; }
+
+    // 等一会儿让数据存到 storage，然后展示
+    setTimeout(async function () { await showRecording(); }, 500);
+  }
+
+  // 展示录制数据
+  async function showRecording() {
+    var result = await chrome.storage.local.get(['__api_monitor_recordings__']);
+    var recordings = result.__api_monitor_recordings__ || [];
+    if (recordings.length === 0) {
+      showDiagPanel('⏺ 操作录制', '<div style="padding:10px;color:#999;">暂无录制数据</div>');
+      return;
+    }
+    var rec = recordings[0];
+    var html = '<div class="diag-section">';
+    html += '<strong>页面：</strong>' + htmlEscape(rec.pageUrl || '') + '<br>';
+    html += '<strong>标题：</strong>' + htmlEscape(rec.pageTitle || '') + '<br>';
+    html += '<strong>时长：</strong>' + (rec.duration || 0) + 'ms | ';
+    html += '<strong>事件：</strong>' + (rec.events ? rec.events.length : 0) + '个<br>';
+    html += '</div>';
+
+    if (rec.events && rec.events.length > 0) {
+      html += '<div class="diag-section"><h5>📋 事件时间线</h5>';
+      html += '<table><tr><th>时间</th><th>类型</th><th>详情</th></tr>';
+      rec.events.forEach(function (ev) {
+        var sec = (ev.time / 1000).toFixed(1) + 's';
+        var detail = '';
+        if (ev.type === 'click') {
+          detail = htmlEscape(ev.detail.tag || '') + ' ' + htmlEscape(ev.detail.text || '') + ' .' + htmlEscape(ev.detail.className || '').substring(0, 30);
+          if (ev.detail.parentDataId) detail += ' [data-id=' + htmlEscape(ev.detail.parentDataId) + ']';
+        } else if (ev.type === 'input' || ev.type === 'change') {
+          detail = htmlEscape(ev.detail.tag || '') + ' ' + htmlEscape(ev.detail.name || ev.detail.id || '') + ' = ' + htmlEscape(ev.detail.value || '');
+        } else if (ev.type === 'focus' || ev.type === 'blur') {
+          detail = htmlEscape(ev.detail.tag || '') + ' ' + htmlEscape(ev.detail.name || ev.detail.id || '');
+        }
+        html += '<tr><td>' + sec + '</td><td>' + ev.type + '</td><td>' + detail + '</td></tr>';
+      });
+      html += '</table></div>';
+    }
+
+    showDiagPanel('⏺ 操作录制 (' + (rec.events ? rec.events.length : 0) + '个事件)', html);
+  }
+
+  // 📋 生成诊断报告
+  async function generateReport() {
+    var btn = $('btnGenReport');
+    var origText = btn.textContent;
+    btn.textContent = '⏳ 生成中...';
+    btn.disabled = true;
+
+    try {
+      var resp = await chrome.runtime.sendMessage({ action: 'GET_DIAG_REPORT' });
+      var html = '<div class="diag-section"><strong>导出时间：</strong>' + (resp.exportedAt || '') + '</div>';
+
+      // DOM 快照摘要
+      if (resp.snapshots && resp.snapshots.length > 0) {
+        html += '<div class="diag-section"><h5>🔍 DOM 快照 (' + resp.snapshots.length + '次)</h5>';
+        resp.snapshots.forEach(function (s, i) {
+          html += '<small>' + (i + 1) + '. ' + htmlEscape(s.title || '') + ' — ' + (s.time || '') + '</small><br>';
+          if (s.tables) html += '<small>  📊 表格:' + s.tables.length + '个</small> ';
+          if (s.inputs) html += '<small>✏️ 输入框:' + s.inputs.length + '个</small> ';
+          if (s.buttons) html += '<small>🔘 按钮:' + s.buttons.length + '个</small><br>';
+        });
+        html += '</div>';
+      } else {
+        html += '<div class="diag-section"><h5>🔍 DOM 快照</h5><small style="color:#999;">无数据 — 请先点击"扫描页面"</small></div>';
+      }
+
+      // 录制摘要
+      if (resp.recordings && resp.recordings.length > 0) {
+        html += '<div class="diag-section"><h5>⏺ 操作录制 (' + resp.recordings.length + '次)</h5>';
+        resp.recordings.forEach(function (r, i) {
+          html += '<small>' + (i + 1) + '. ' + htmlEscape(r.pageTitle || '') + ' — ' + (r.events ? r.events.length : 0) + '个事件, ' + (r.duration || 0) + 'ms</small><br>';
+        });
+        html += '</div>';
+      } else {
+        html += '<div class="diag-section"><h5>⏺ 操作录制</h5><small style="color:#999;">无数据 — 请先点击"录制"并操作页面</small></div>';
+      }
+
+      // API 请求摘要
+      if (resp.requests && resp.requests.length > 0) {
+        // 按 URL 去重统计
+        var urlMap = {};
+        resp.requests.forEach(function (r) {
+          var path = r.url || '';
+          try { path = new URL(r.url).pathname; } catch (e) {}
+          urlMap[path] = (urlMap[path] || 0) + 1;
+        });
+        var sorted = Object.entries(urlMap).sort(function (a, b) { return b[1] - a[1]; });
+
+        html += '<div class="diag-section"><h5>🌐 API 请求 (' + resp.requests.length + '条, ' + Object.keys(urlMap).length + '个接口)</h5>';
+        html += '<table><tr><th>#</th><th>数量</th><th>接口路径</th></tr>';
+        sorted.slice(0, 15).forEach(function (entry, i) {
+          html += '<tr><td>' + (i + 1) + '</td><td>' + entry[1] + '</td><td>' + htmlEscape(entry[0].substring(0, 60)) + '</td></tr>';
+        });
+        html += '</table></div>';
+      } else {
+        html += '<div class="diag-section"><h5>🌐 API 请求</h5><small style="color:#999;">无数据 — 请确保监听已开启</small></div>';
+      }
+
+      showDiagPanel('📋 诊断报告', html);
+    } catch (e) {
+      showDiagPanel('📋 诊断报告', '<div style="color:#721c24;">生成失败: ' + htmlEscape(e.message) + '</div>');
+    }
+
+    btn.textContent = origText;
+    btn.disabled = false;
+  }
+
+  // 导出诊断数据
+  async function exportDiagData() {
+    try {
+      var resp = await chrome.runtime.sendMessage({ action: 'GET_DIAG_REPORT' });
+      var blob = new Blob([JSON.stringify(resp, null, 2)], { type: 'application/json' });
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      a.href = url;
+      a.download = 'diag-report-' + new Date().toISOString().slice(0, 19).replace(/:/g, '-') + '.json';
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      console.warn('[Popup] export diag failed:', e.message);
+    }
+  }
+
+  function showDiagPanel(title, html) {
+    $('diagPanelTitle').textContent = title;
+    $('diagBody').innerHTML = html;
+    $('diagPanel').style.display = 'block';
+  }
+
+  function closeDiagPanel() {
+    $('diagPanel').style.display = 'none';
   }
 
 })();

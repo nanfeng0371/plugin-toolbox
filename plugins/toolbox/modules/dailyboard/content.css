@@ -49,14 +49,42 @@
 
 /* === 课节控制区 === */
 .db-lecture-controls{display:flex;align-items:center;gap:12px;padding:8px 14px;background:#f8f9fb;border-bottom:1px solid #e8eaed;flex-shrink:0;flex-wrap:wrap;min-height:40px;}
+.db-lecture-filter-row{display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;width:100%;}
+.db-filter-sep{width:1px;height:20px;background:#d0d5dd;margin:0 2px;flex-shrink:0;}
+.db-kw-area{display:flex;align-items:center;gap:6px;flex:1 1 auto;min-width:0;}
+.db-kw-bind-btn{padding:4px 12px;border:1px solid #2e7d32;border-radius:6px;background:#e8f5e9;color:#2e7d32;font-size:12px;cursor:pointer;font-weight:500;white-space:nowrap;transition:all 0.15s;}
+.db-kw-bind-btn:hover{background:#c8e6c9;border-color:#1b5e20;color:#1b5e20;}
 .db-lecture-courses{display:flex;gap:5px;flex-wrap:wrap;flex:1 1 auto;min-width:0;align-items:center;}
 .db-course-chip{display:inline-flex;align-items:center;padding:4px 12px;border:1px solid #d0d5dd;border-radius:14px;font-size:12px;cursor:pointer;background:#fff;color:#555;user-select:none;transition:all 0.15s;white-space:nowrap;line-height:1.4;}
 .db-course-chip:hover{border-color:#4a6cf7;color:#4a6cf7;background:#f0f3ff;}
 .db-course-chip--active{background:#4a6cf7;color:#fff;border-color:#4a6cf7;font-weight:600;}
+.db-chips-hidden{display:none;}
+.db-chips-hidden--show{display:inline;}
+.db-chips-toggle{display:inline-flex;align-items:center;padding:4px 10px;border:1px dashed #d0d5dd;border-radius:14px;font-size:11px;cursor:pointer;background:#f8f9fb;color:#888;user-select:none;transition:all 0.15s;line-height:1.4;}
+.db-chips-toggle:hover{background:#eef0f5;color:#555;border-color:#b0b5bd;}
+.db-keyword-tag{display:inline-flex;align-items:center;padding:3px 10px;border-radius:12px;font-size:11px;background:#fff3e0;color:#e65100;border:1px solid #ffe0b2;white-space:nowrap;margin-left:4px;}
 .db-lecture-picker{display:flex;align-items:center;gap:8px;font-size:13px;flex-shrink:0;white-space:nowrap;padding:2px 0;}
 .db-lecture-select{font-size:13px;padding:5px 28px 5px 10px;border:1px solid #d0d5dd;border-radius:6px;background:#fff;color:#333;cursor:pointer;max-width:260px;outline:none;-webkit-appearance:auto;appearance:auto;}
 .db-lecture-select:focus{border-color:#4a6cf7;box-shadow:0 0 0 2px rgba(74,108,247,0.15);}
 .db-lecture-meta{font-size:12px;color:#888;flex-shrink:0;}
+.db-lecture-daterange{display:flex;align-items:center;gap:6px;flex-shrink:0;}
+.db-daterange-label{font-size:14px;}
+.db-daterange-sep{color:#999;font-size:12px;}
+.db-date-input{font-size:12px;padding:4px 8px;border:1px solid #d0d5dd;border-radius:6px;background:#fff;color:#333;cursor:pointer;outline:none;width:128px;}
+.db-date-input:focus{border-color:#4a6cf7;box-shadow:0 0 0 2px rgba(74,108,247,0.15);}
+.db-date-input::-webkit-calendar-picker-indicator{cursor:pointer;opacity:0.6;}
+.db-date-input:hover::-webkit-calendar-picker-indicator{opacity:1;}
+.db-apply-btn{font-size:12px;padding:4px 14px;border:1px solid #4a6cf7;border-radius:6px;background:#4a6cf7;color:#fff;cursor:pointer;outline:none;white-space:nowrap;transition:all 0.2s;}
+.db-apply-btn:hover{background:#3b5de7;border-color:#3b5de7;}
+.db-apply-btn:active{background:#2f4fd4;}
+.db-apply-btn:disabled{background:#aaa;border-color:#aaa;cursor:not-allowed;}
+.db-lecture-keyword-row{display:flex;align-items:center;gap:6px;flex-shrink:0;}
+.db-keyword-input{font-size:12px;padding:4px 8px;border:1px solid #d0d5dd;border-radius:6px;background:#fff;color:#333;outline:none;flex:1;min-width:0;}
+.db-keyword-input:focus{border-color:#4a6cf7;box-shadow:0 0 0 2px rgba(74,108,247,0.15);}
+.db-keyword-input::placeholder{color:#bbb;}
+.db-kw-tag{font-size:12px;padding:2px 10px;background:#e8f0fe;color:#1a56db;border-radius:10px;max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:default;}
+.db-kw-edit-btn{font-size:11px;padding:2px 8px;border:1px solid #d0d5dd;border-radius:4px;background:#fff;color:#666;cursor:pointer;outline:none;white-space:nowrap;}
+.db-kw-edit-btn:hover{background:#f0f0f0;color:#333;border-color:#bbb;}
 
 /* === 标签筛选栏 === */
 .db-filter-bar{display:flex;gap:5px;padding:8px 14px;overflow-x:auto;border-bottom:1px solid #f0f0f0;flex-shrink:0;background:#fafbfc;}

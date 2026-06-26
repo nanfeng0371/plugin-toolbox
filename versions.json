@@ -1,5 +1,26 @@
 [
   {
+    "version": "2.2.103",
+    "buildTime": "2026-06-26T13:24:10.165Z",
+    "file": "toolbox-v2.2.103.crx",
+    "changes": [],
+    "rebuildCount": 0
+  },
+  {
+    "version": "2.2.102",
+    "buildTime": "2026-06-26T13:23:26.670Z",
+    "file": "toolbox-v2.2.102.crx",
+    "changes": [],
+    "rebuildCount": 0
+  },
+  {
+    "version": "2.2.101",
+    "buildTime": "2026-06-26T13:22:48.546Z",
+    "file": "toolbox-v2.2.101.crx",
+    "changes": [],
+    "rebuildCount": 0
+  },
+  {
     "version": "2.2.81",
     "buildTime": "2026-06-21T11:53:17.053Z",
     "file": "toolbox-v2.2.81.crx",

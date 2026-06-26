@@ -1,9 +1,9 @@
 {
   "name": "tiaoke",
   "label": "📚 调课助手",
-  "version": "4.0.0",
-  "icon": "",
-  "description": "批量调课工具，粘贴数据即可自动批量提交改约",
+	"version": "4.1.0",
+	"icon": "",
+	"description": "批量调课工具，支持三段式课程匹配（课程名关键词过滤+多结果自动报错）",
   "permissions": [],
   "hostPermissions": [],
   "hasBackground": true,

@@ -10,15 +10,32 @@
   // ===== 接收 hook.js 发来的拦截数据 =====
   window.addEventListener('message', function (e) {
     if (e.data && e.data.source === '__api_monitor_hook__') {
-      // 附加当前页面元数据
-      const payload = Object.assign({}, e.data.payload, {
-        pageUrl: location.href,
-        pageTitle: document.title,
-        pageHost: location.hostname
-      });
-      // 转发给 background
-      chrome.runtime.sendMessage({ action: 'NEW_REQUEST', data: payload })
-        .catch(() => {});
+      var msgType = e.data.type;
+      // API 请求数据 → 附加页面元数据
+      if (msgType === 'request') {
+        const payload = Object.assign({}, e.data.payload, {
+          pageUrl: location.href,
+          pageTitle: document.title,
+          pageHost: location.hostname
+        });
+        chrome.runtime.sendMessage({ action: 'NEW_REQUEST', data: payload }).catch(function () {});
+      }
+      // 🆕 DOM 快照 → 直接转发
+      if (msgType === 'dom_snapshot') {
+        chrome.runtime.sendMessage({ action: 'DOM_SNAPSHOT', data: e.data.payload }).catch(function () {});
+      }
+      // 🆕 录制状态 → 转发
+      if (msgType === 'recording_status') {
+        chrome.runtime.sendMessage({ action: 'RECORDING_STATUS', data: e.data.payload }).catch(function () {});
+      }
+      // 🆕 录制数据 → 附加页面URL后转发
+      if (msgType === 'recording_data') {
+        var recData = Object.assign({}, e.data.payload, {
+          pageUrl: location.href,
+          pageTitle: document.title
+        });
+        chrome.runtime.sendMessage({ action: 'RECORDING_DATA', data: recData }).catch(function () {});
+      }
     }
   });
 
@@ -29,6 +46,20 @@
         source: '__api_monitor_ctrl__',
         action: msg.listening ? 'start' : 'stop'
       }, '*');
+      sendResponse({ ok: true });
+    }
+    // 🆕 DOM 扫描
+    if (msg.action === 'SCAN_DOM') {
+      window.postMessage({ source: '__api_monitor_ctrl__', action: 'scan_dom' }, '*');
+      sendResponse({ ok: true });
+    }
+    // 🆕 录制控制
+    if (msg.action === 'START_RECORDING') {
+      window.postMessage({ source: '__api_monitor_ctrl__', action: 'start_recording' }, '*');
+      sendResponse({ ok: true });
+    }
+    if (msg.action === 'STOP_RECORDING') {
+      window.postMessage({ source: '__api_monitor_ctrl__', action: 'stop_recording' }, '*');
       sendResponse({ ok: true });
     }
     // v1.2.0: 同源测试 — 从 content script 上下文尝试 fetch

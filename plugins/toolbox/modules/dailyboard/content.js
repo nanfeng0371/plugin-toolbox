@@ -1,5 +1,5 @@
 /* ==========================================
-   每日工作看板 v2.2.51 — content.js
+   每日工作看板 v2.2.93 — content.js
    表格式密集视图 + 标签筛选 + 报告富化 + CloudBase 直连同步
    ========================================== */
 
@@ -80,6 +80,10 @@
     isHistoryMode: false,   // 是否历史模式（只读）
     viewMode: 'date',       // 'date' | 'lecture' — 日期视角 vs 课节视角
     lectureCourses: [293],  // 课节视角选中的课程 aiCourseId 列表（默认293=主课）
+    courseNameKeywords: '', // 课程名关键字过滤（逗号分隔，如"初一思维,初二思维"）
+    _kwEditing: false,      // 关键字输入框是否展开编辑中
+    lectureDateStart: '',   // 课节视角起始日期（YYYY-MM-DD），老师自选
+    lectureDateEnd: '',     // 课节视角结束日期（YYYY-MM-DD），老师自选
     lectureLecNum: null,    // 课节视角选中的讲次号（如 "15"）
     lectures: [],           // 可选课节列表 [{lecNum, label, lessonNames, periodIds, studentCount, latestDate}]
     courseList: [],         // 教师所有课程 [{aiCourseId, title, studentCount}]
@@ -123,18 +127,38 @@
 
   /* ── Storage ── */
   async function loadSettings() {
-    chrome.storage.local.get(['db_teacherSubject', 'db_teacherGrade', 'db_teacherCenter', 'db_teacherName'], function (d) {
+    chrome.storage.local.get(['db_teacherSubject', 'db_teacherGrade', 'db_teacherCenter', 'db_teacherName', 'db_courseKeywords', 'db_lectureDateStart', 'db_lectureDateEnd'], function (d) {
       state.teacher = state.teacher || {};
       if (d.db_teacherName) state.teacher.name = d.db_teacherName;
       if (d.db_teacherSubject) state.teacher.subject = d.db_teacherSubject;
       if (d.db_teacherGrade) state.teacher.grade = d.db_teacherGrade;
       if (d.db_teacherCenter) state.teacher.center = d.db_teacherCenter;
+      if (d.db_courseKeywords) state.courseNameKeywords = d.db_courseKeywords;
+      if (d.db_lectureDateStart) state.lectureDateStart = d.db_lectureDateStart;
+      if (d.db_lectureDateEnd) state.lectureDateEnd = d.db_lectureDateEnd;
       state.settingsConfigured = !!(state.teacher.subject || state.teacher.grade);
     });
   }
   async function saveSettings(subject, grade, center) {
     chrome.storage.local.set({ db_teacherSubject: subject || '', db_teacherGrade: grade || '', db_teacherCenter: center || '' });
     state.settingsConfigured = true;
+  }
+  async function saveCourseKeywords(keywords) {
+    chrome.storage.local.set({ db_courseKeywords: keywords || '' });
+    state.courseNameKeywords = keywords || '';
+  }
+  /** 保存课节视角日期范围 */
+  function saveLectureDateRange(start, end) {
+    chrome.storage.local.set({ db_lectureDateStart: start, db_lectureDateEnd: end });
+    state.lectureDateStart = start;
+    state.lectureDateEnd = end;
+  }
+  /** 获取课节视角默认日期范围（最近30天） */
+  function getLectureDateDefault() {
+    var today = new Date();
+    var end = todayKey();
+    var start = new Date(today.getTime() - 29 * 86400000); // 30天前
+    return { start: dateKey(start), end: end };
   }
   async function loadDoneStatus() {
     var k = 'db_done_' + (state.viewDate || todayKey());
@@ -272,7 +296,8 @@
     Object.keys(params || {}).forEach(function (k) {
       if (params[k] !== undefined && params[k] !== null && params[k] !== '') url.searchParams.set(k, params[k]);
     });
-    console.log('[DailyBoard] GET', url.toString());
+    // 注释掉以减少控制台刷屏
+    // console.log('[DailyBoard] GET', url.toString());
     var resp = await fetch(url.toString(), { credentials: 'include', headers: { 'Accept': 'application/json' } });
     var text = await resp.text();
     if (!resp.ok) throw new Error('HTTP ' + resp.status + ' ' + text.substring(0, 200));
@@ -288,7 +313,8 @@
 
   async function workApiPost(path, body) {
     var url = new URL(path, WORK_DOMAIN);
-    console.log('[DailyBoard] POST', url.toString(), JSON.stringify(body));
+    // 注释掉以减少控制台刷屏
+    // console.log('[DailyBoard] POST', url.toString(), JSON.stringify(body));
     var resp = await fetch(url.toString(), {
       method: 'POST',
       credentials: 'include',
@@ -379,8 +405,8 @@
     function extractRows(json) {
       try {
         var data = json && json.data;
-        // 详细诊断：打印完整返回结构和 data 类型
-        console.log('[DailyBoard] 🔍 排课API返回 code=' + json.code + ' | dataType=' + (Array.isArray(data) ? 'array[' + data.length + ']' : typeof data) + ' | keys=' + (data && typeof data === 'object' ? Object.keys(data).join(',') : 'N/A'));
+        // 注释：减少控制台刷屏
+        // console.log('[DailyBoard] 🔍 排课API返回 code=' + json.code + ' | dataType=' + (Array.isArray(data) ? 'array[' + data.length + ']' : typeof data) + ' | keys=' + (data && typeof data === 'object' ? Object.keys(data).join(',') : 'N/A'));
         if (!data) return [];
         // 情况1：data 本身就是数组
         if (Array.isArray(data)) return data;
@@ -389,13 +415,13 @@
           var fields = ['classList', 'rows', 'list', 'records', 'items', 'content'];
           for (var fi = 0; fi < fields.length; fi++) {
             if (Array.isArray(data[fields[fi]])) {
-              console.log('[DailyBoard] ✅ 从字段', fields[fi], '提取到', data[fields[fi]].length, '条');
+              // console.log('[DailyBoard] ✅ 从字段', fields[fi], '提取到', data[fields[fi]].length, '条');
               return data[fields[fi]];
             }
           }
           // 情况3：data 是单个学生对象（有 studentId 或 userId）— 包装为数组
           if (data.studentId || data.userId || data.studentName) {
-            console.log('[DailyBoard] ⚠️ data是单对象(非数组)，包装为1条:', data.studentId || data.userId);
+            // console.log('[DailyBoard] ⚠️ data是单对象(非数组)，包装为1条:', data.studentId || data.userId);
             return [data];
           }
           // 情况4：data 有 records/total 分页结构
@@ -416,20 +442,19 @@
         var rows = extractRows(json);
         // 剔除「非应出勤」学员
         rows = rows.filter(function(r) { return r.attendanceRequired === 1; });
-        if (rows.length > 0) { console.log('[DailyBoard] ✅', paramsList[i].label, rows.length + '条'); return rows; }
-      } catch (e) { console.warn('[DailyBoard]', paramsList[i].label, 'GET失败:', e.message); }
+        if (rows.length > 0) return rows;
+      } catch (e) { /* GET 失败 */ }
     }
 
     // GET 全部返回空 → 尝试 POST
-    console.log('[DailyBoard] 🔄 GET全部为空，改试POST...');
     for (var j = 0; j < paramsList.length; j++) {
       try {
         var postJson = await workApiPost(SCHEDULE_API, paramsList[j].data);
         var postRows = extractRows(postJson);
         // 剔除「非应出勤」
         postRows = postRows.filter(function(r) { return r.attendanceRequired === 1; });
-        if (postRows.length > 0) { console.log('[DailyBoard] ✅[POST]', paramsList[j].label, postRows.length + '条'); return postRows; }
-      } catch (e2) { console.warn('[DailyBoard]', paramsList[j].label, 'POST失败:', e2.message); }
+        if (postRows.length > 0) return postRows;
+      } catch (e2) { /* POST 失败 */ }
     }
     console.warn('[DailyBoard] ⚠️ 全部组合返回空');
     return [];
@@ -438,7 +463,7 @@
   /** 获取教师所有课程列表（含学生人数） */
   async function fetchAllCourses() {
     try {
-      var json = await workApi('/prod-api/student-center-ai/ai/teacher/course/list', {});
+      var json = await workApiPost('/prod-api/student-center-ai/ai/teacher/course/list', {});
       var courses = (json && json.data) || [];
       if (!Array.isArray(courses)) courses = [];
       console.log('[DailyBoard] 课程列表:', courses.length + '门');
@@ -459,14 +484,9 @@
 
   /** 拉取全学期排课数据（用于课节视角） */
   async function fetchScheduleWide(startDate, endDate) {
-    console.log('[DailyBoard] 🔍 全学期排课:', startDate, '~', endDate);
+    // console.log('[DailyBoard] 🔍 全学期排课:', startDate, '~', endDate);
     var tStart = startDate + ' 00:00:00';
     var tEnd = endDate + ' 23:59:59';
-    var paramsList = [
-      { label: 'classStatus=2+全学期', data: { startDate: tStart, endDate: tEnd, classStatus: '2', current: '1', size: '500' } },
-      { label: 'classStatus=1+全学期', data: { startDate: tStart, endDate: tEnd, classStatus: '1', current: '1', size: '500' } },
-      { label: 'classStatus=0+全学期', data: { startDate: tStart, endDate: tEnd, classStatus: '0', current: '1', size: '500' } },
-    ];
 
     function extractRows(json) {
       try {
@@ -485,27 +505,86 @@
       }
     }
 
+    // 尝试用某种方式拉一页数据（GET/POST 双层容错），失败返回 null
+    async function _tryFetch(label, body, page) {
+      var p = Object.assign({}, body);
+      p.current = String(page);
+      // 先试 GET
+      try {
+        var json = await workApi(SCHEDULE_API, p);
+        var rows = extractRows(json);
+        return { json: json, rows: rows };
+      } catch (e) { /* GET 失败 */ }
+      // 再试 POST
+      try {
+        var postJson = await workApiPost(SCHEDULE_API, p);
+        return { json: postJson, rows: extractRows(postJson) };
+      } catch (e2) { /* POST 也失败 */ }
+      // 两种方法都不行 → 返回 null（调用方决定怎么处理）
+      return null;
+    }
+
+    // 参数组合列表（和日视图完全一致）
+    var paramSets = [
+      { label: '无classStatus+全学期', data: { startDate: tStart, endDate: tEnd, current: '1', size: '500' } },
+      { label: 'classStatus=1+全学期', data: { startDate: tStart, endDate: tEnd, classStatus: '1', current: '1', size: '500' } },
+      { label: 'classStatus=0+全学期', data: { startDate: tStart, endDate: tEnd, classStatus: '0', current: '1', size: '500' } },
+    ];
+
     var allRows = [];
-    for (var i = 0; i < paramsList.length; i++) {
+    var hasWorkingMethod = false;  // 是否找到至少一个能用的方法
+
+    for (var si = 0; si < paramSets.length; si++) {
+      var ps = paramSets[si];
       var page = 1;
-      while (true) {
-        try {
-          var params = Object.assign({}, paramsList[i].data);
-          params.current = String(page);
-          var json = await workApi(SCHEDULE_API, params);
-          var rows = extractRows(json);
-          console.log('[DailyBoard] 全学期', paramsList[i].label, '第' + page + '页', rows.length + '条');
-          allRows = allRows.concat(rows);
-          var totalPages = Number((json && json.data && json.data.pages)) || 1;
-          if (page >= totalPages || rows.length === 0) break;
-          page++;
-        } catch (e) {
-          console.warn('[DailyBoard] 全学期', paramsList[i].label, '第' + page + '页失败:', e.message);
+      // 先试第1页，确认这个参数组合能否用
+      var first = await _tryFetch(ps.label, ps.data, 1);
+      if (!first) continue;  // 这个参数组合完全不能用，跳过
+      hasWorkingMethod = true;
+      allRows = allRows.concat(first.rows);
+      var totalPages = Number((first.json && first.json.data && first.json.data.pages)) || 1;
+      // 继续翻页
+      for (page = 2; page <= totalPages && first.rows.length > 0; page++) {
+        var next = await _tryFetch(ps.label, ps.data, page);
+        if (!next || next.rows.length === 0) break;
+        allRows = allRows.concat(next.rows);
+      }
+      // 如果已经拿到数据了就不需要试其他组合了（去重由调用方处理）
+      if (allRows.length > 0) break;
+    }
+
+    // 如果所有有日期的参数组合都失败 → 回退到日视图的单日逻辑（只拉今天）
+    if (!hasWorkingMethod || allRows.length === 0) {
+      console.warn('[DailyBoard] ⚠️ 全学期排课所有参数均失败，回退到单日拉取...');
+      var todayStr = dateKey();
+      var dayParams = [
+        { label: '单日-无status', data: { startDate: todayStr + ' 00:00:00', endDate: todayStr + ' 23:59:59', current: '1', size: '500' } },
+        { label: '单日-status=1', data: { startDate: todayStr + ' 00:00:00', endDate: todayStr + ' 23:59:59', classStatus: '1', current: '1', size: '500' } },
+        { label: '单日-status=0', data: { startDate: todayStr + ' 00:00:00', endDate: todayStr + ' 23:59:59', classStatus: '0', current: '1', size: '500' } },
+      ];
+      for (var di = 0; di < dayParams.length; di++) {
+        var dResult = await _tryFetch(dayParams[di].label, dayParams[di].data, 1);
+        if (dResult && dResult.rows.length > 0) {
+          allRows = allRows.concat(dResult.rows);
           break;
         }
       }
     }
-    console.log('[DailyBoard] 全学期排课总计:', allRows.length + '条');
+
+    // console.log('[DailyBoard] 全学期排课总计:', allRows.length + '条');
+
+    // 关键字过滤：只保留 courseName 匹配关键字的课节
+    var kw = (state.courseNameKeywords || '').trim();
+    if (kw) {
+      var kws = kw.split(/[,，\s]+/).filter(Boolean);
+      var beforeCount = allRows.length;
+      allRows = allRows.filter(function (r) {
+        var cn = r.courseName || '';
+        return kws.some(function (k) { return cn.indexOf(k) !== -1; });
+      });
+      // console.log('[DailyBoard] 关键字过滤:', kws.join('、'), '→', beforeCount + '条→' + allRows.length + '条');
+    }
+
     return allRows;
   }
 
@@ -950,7 +1029,14 @@
       var start = parseTime(s.scheduleTime);
       var end = parseTime(s.endTime);
 
-      if (now < start) { s._catId = 1; s._catStatus = 'pending'; cats[1].push(s); return; }
+      if (now < start) {
+        // 必须是今天才归入"今天有课-未上课"，避免课节视角中7月份的课误判
+        var sameDay = start.getFullYear() === now.getFullYear() && start.getMonth() === now.getMonth() && start.getDate() === now.getDate();
+        if (sameDay) { s._catId = 1; s._catStatus = 'pending'; cats[1].push(s); return; }
+        // 非今天的未来课 → 归入第7类（今天没课），但标注实际日期
+        s._catId = 7; s._catStatus = 'scheduled'; s._scheduledDate = start;
+        cats[7].push(s); return;
+      }
       if (now >= start && now <= end) { s._catId = 2; s._catStatus = 'inclass'; cats[2].push(s); return; }
 
       // 已下课
@@ -1525,6 +1611,7 @@
     else if (s._catStatus === 'waiting') statusHTML = '<span class="db-status-badge db-status-badge--pending">等待报告</span>';
     else if (s._catStatus === 'noreport') statusHTML = '<span class="db-status-badge db-status-badge--noreport">无报告</span>';
     else if (s._catStatus === 'noclass') statusHTML = '<span class="db-status-badge db-status-badge--noclass">没课</span>';
+    else if (s._catStatus === 'scheduled') statusHTML = '<span class="db-status-badge db-status-badge--noclass">' + dateKey(s._scheduledDate) + '有课</span>';
     else statusHTML = '<span class="db-status-badge db-status-badge--done">已下课</span>';
 
     // 评价等级 + 异常检测（B/B+ 红底）
@@ -1968,6 +2055,8 @@
       '<div class="db-modal">' +
         '<div class="db-modal-title">⚙️ 教师设置</div>' +
         '<div class="db-modal-body">设置学科和年级，数据将写入云端供管理看板使用</div>' +
+        '<input id="db-set-keywords" type="text" placeholder="课程名关键字（逗号分隔，如：初一思维,初二思维）" value="' + esc(state.courseNameKeywords || '') + '" style="width:100%;padding:6px;border:1px solid #ddd;border-radius:6px;font-size:12px;margin-bottom:6px;box-sizing:border-box;">' +
+        '<div style="font-size:11px;color:#999;margin-bottom:10px;">🖊️ 只显示课程名包含关键字的课节（空=全部）</div>' +
         '<select id="db-set-subject" style="width:100%;padding:6px;border:1px solid #ddd;border-radius:6px;font-size:13px;margin-bottom:6px;">' +
           '<option value="">-- 选择学科 --</option>' +
           '<option' + sel(state.teacher.subject, '数学') + '>数学</option><option' + sel(state.teacher.subject, '英语') + '>英语</option>' +
@@ -1993,10 +2082,13 @@
     backdrop.querySelector('#db-set-cancel').addEventListener('click', function () { backdrop.remove(); });
     backdrop.querySelector('#db-set-save').addEventListener('click', function () {
       saveSettings(backdrop.querySelector('#db-set-subject').value, backdrop.querySelector('#db-set-grade').value, backdrop.querySelector('#db-set-center').value);
+      saveCourseKeywords(backdrop.querySelector('#db-set-keywords').value);
       state.teacher.subject = backdrop.querySelector('#db-set-subject').value;
       state.teacher.grade = backdrop.querySelector('#db-set-grade').value;
       state.teacher.center = backdrop.querySelector('#db-set-center').value;
+      state.courseNameKeywords = backdrop.querySelector('#db-set-keywords').value;
       backdrop.remove();
+      // 日视图：有数据时刷新分类；课节视图不再自动刷新，由用户手动点"应用"按钮
       if (state.categories) {
         var p = calcProgress(state.categories);
         renderContent(teacherName(), state.categories, p);
@@ -2135,20 +2227,20 @@
       // Step 4: 分类 + 渲染（核心步骤，必须成功）
       setLoadingProgress(4, 4, '分类处理...');
       var now = new Date();
-      console.log('[DailyBoard] 🔹 Step4a: 开始分类, students=', students.length);
+      // console.log('[DailyBoard] 🔹 Step4a: 开始分类, students=', students.length);
       state.categories = classifyStudents(students, now);
-      console.log('[DailyBoard] 🔹 Step4b: 分类完成, categories=', Object.keys(state.categories).length);
+      // console.log('[DailyBoard] 🔹 Step4b: 分类完成, categories=', Object.keys(state.categories).length);
 
       // 刷新时恢复打勾
       if (isRefresh && oldDone) {
         for (var k in oldDone) doneMap[k] = oldDone[k];
       }
 
-      console.log('[DailyBoard] 🔹 Step4c: 计算进度...');
+      // console.log('[DailyBoard] 🔹 Step4c: 计算进度...');
       var progress = calcProgress(state.categories);
-      console.log('[DailyBoard] 🔹 Step4d: 渲染内容...');
+      // console.log('[DailyBoard] 🔹 Step4d: 渲染内容...');
       renderContent(teacherName(), state.categories, progress);
-      console.log('[DailyBoard] 🔹 Step4e: 渲染完成 ✅');
+      // console.log('[DailyBoard] 🔹 Step4e: 渲染完成 ✅');
 
       // 刷新完成后清除过期提示
       if (isRefresh) {
@@ -2244,7 +2336,7 @@
     try {
       // Step 1: 拉取全学期排课
       setLoadingProgress(1, 5, '拉取全学期排课数据...');
-      var allSchedule = await fetchScheduleWideCached('2026-03-01', dateKey());
+      var allSchedule = await fetchScheduleWideCached(state.lectureDateStart, state.lectureDateEnd);
       if (!allSchedule || allSchedule.length === 0) {
         if (panelRoot) panelRoot.innerHTML = '<style>' + buildCSS() + '</style>' + buildLectureHeaderHTML() + '<div style="padding:40px 20px;text-align:center;color:#aaa;font-size:13px;">📭 未获取到排课数据</div>';
         return;
@@ -2252,7 +2344,6 @@
 
       // 重建课节列表（同步课程多选变化）
       state.lectures = extractLectures(allSchedule, courseIds);
-
       // 找到当前讲次的所有 periodIds
       var curLecture = state.lectures.find(function (l) { return l.lecNum === lecNum; });
       if (!curLecture) {
@@ -2296,7 +2387,10 @@
       var dates = Object.keys(dateSet).sort();
       console.log('[DailyBoard] 课节涉及日期:', dates.length + '天:', dates.join(', '));
 
-      // 拉全量课堂数据后按 userId+classDate 筛选（分页 + 实时进度）
+      // 拉课堂数据，加日期范围过滤（大幅减少分页轮数）
+      var cDateStart = dates[0] + ' 00:00:00';
+      var cDateEnd = dates[dates.length - 1] + ' 23:59:59';
+      console.log('[DailyBoard] 课堂日期过滤:', cDateStart, '~', cDateEnd);
       var allClassroom = [];
       var cPage = 1;
       var cTotalKnown = null;
@@ -2305,6 +2399,7 @@
         setLoadingProgress(3, 5, label);
         var cj = await workApiPost('/prod-api/student-center-ai/ai/teacher/classroom/list', {
           current: String(cPage), size: '500', courseClassify: 3, operationType: 1,
+          startDate: cDateStart, endDate: cDateEnd,
         });
         var cr = (cj && cj.data && cj.data.records) || [];
         allClassroom = allClassroom.concat(cr);
@@ -2431,10 +2526,44 @@
         '</div>' +
       '<button class="db-close-btn" id="db-close">✕</button>' +
       '</div>' +
+      // 视角切换 Tab（课节视角高亮）
+      '<div class="db-viewtabs">' +
+        '<button class="db-viewtab" data-view="date">📅 日期视角</button>' +
+        '<button class="db-viewtab db-viewtab--active" data-view="lecture">📚 课节视角</button>' +
+      '</div>' +
       // 课程多选区
       '<div class="db-lecture-controls">' +
+        // 统一筛选行：日期范围 + 关键字 + 应用
+        '<div class="db-lecture-filter-row">' +
+          '<span class="db-daterange-label">📅</span>' +
+          '<input type="date" class="db-date-input" id="db-date-start" value="' + state.lectureDateStart + '" title="起始日期">' +
+          '<span class="db-daterange-sep">~</span>' +
+          '<input type="date" class="db-date-input" id="db-date-end" value="' + state.lectureDateEnd + '" title="结束日期">' +
+          '<span class="db-filter-sep"></span>' +
+          (function () {
+            var kw = (state.courseNameKeywords || '').trim();
+            if (kw && !state._kwEditing) {
+              // 折叠态：标签 + 编辑按钮
+              var kws = kw.split(/[,，\s]+/).filter(Boolean);
+              return '<span class="db-kw-area" id="db-kw-area">' +
+                '<span class="db-daterange-label">🏷️</span>' +
+                '<span class="db-kw-tag">' + esc(kws.join('、')) + '</span>' +
+                '<button class="db-kw-edit-btn" id="db-kw-edit" title="编辑筛选条件">✏️</button>' +
+              '</span>';
+            } else {
+              // 展开态 / 无关键字：输入框 + 绑定按钮
+              return '<span class="db-kw-area" id="db-kw-area">' +
+                '<span class="db-daterange-label">🏷️</span>' +
+                '<input type="text" class="db-keyword-input" id="db-lecture-keywords" placeholder="课程名关键字（逗号分隔）" value="' + esc(state.courseNameKeywords || '') + '" title="输入课程名关键字筛选，多个用逗号分隔">' +
+                '<button class="db-kw-bind-btn" id="db-kw-bind" title="保存关键字（不重新拉数据）">✓ 绑定</button>' +
+              '</span>';
+            }
+          })() +
+          '<button class="db-apply-btn" id="db-apply-filter" title="应用筛选条件重新拉取数据">🔍 应用</button>' +
+        '</div>' +
         '<div class="db-lecture-courses" id="db-lecture-courses">' +
           buildCourseChipsHTML() +
+          buildKeywordTagHTML() +
         '</div>' +
         '<div class="db-lecture-picker">' +
           '第 <select class="db-lecture-select" id="db-lecture-select">' +
@@ -2458,12 +2587,26 @@
     var selected = state.lectureCourses;
     var selSet = {};
     selected.forEach(function (id) { selSet[id] = true; });
-    return list.map(function (c) {
+    var allChips = list.map(function (c) {
       var checked = selSet[c.aiCourseId];
       return '<label class="db-course-chip' + (checked ? ' db-course-chip--active' : '') + '" data-course-id="' + c.aiCourseId + '">' +
         '<input type="checkbox" ' + (checked ? 'checked' : '') + ' style="display:none;">' +
         esc(c.title) + '</label>';
-    }).join('');
+    });
+    if (allChips.length <= 1) return allChips.join('');
+    // 折叠态：只显示第1个 + "…" 展开按钮
+    var hiddenCount = allChips.length - 1;
+    return allChips[0] +
+      '<span class="db-chips-hidden">' + allChips.slice(1).join('') + '</span>' +
+      '<button class="db-chips-toggle" id="db-chips-toggle" data-collapsed-text="+' + hiddenCount + '..." title="展开全部课程">+' + hiddenCount + '…</button>';
+  }
+
+  /** 关键字过滤标签（显示在课程 chips 后面） */
+  function buildKeywordTagHTML() {
+    var kw = (state.courseNameKeywords || '').trim();
+    if (!kw) return '';
+    var kws = kw.split(/[,，\s]+/).filter(Boolean);
+    return '<span class="db-keyword-tag" title="当前课程过滤：' + esc(kw) + '">🔍 ' + esc(kws.join('、')) + '</span>';
   }
 
   /** 讲次下拉 option */
@@ -2492,6 +2635,160 @@
     var closeBtn = panelRoot.getElementById('db-close');
     if (closeBtn) closeBtn.addEventListener('click', closePanel);
 
+    // 视角切换 Tab
+    panelRoot.querySelectorAll('.db-viewtab').forEach(function (tab) {
+      tab.addEventListener('click', function () {
+        var mode = this.dataset.view;
+        if (mode === state.viewMode) return;
+        switchViewMode(mode);
+      });
+    });
+
+    // "编辑"关键字按钮 → 展开输入框
+    var kwEditBtn = panelRoot.getElementById('db-kw-edit');
+    if (kwEditBtn) {
+      kwEditBtn.addEventListener('click', function () {
+        state._kwEditing = true;
+        // 重新渲染关键字区域为展开态（输入框 + 绑定按钮）
+        var kwArea = panelRoot.getElementById('db-kw-area');
+        if (kwArea) {
+          kwArea.innerHTML = '<span class="db-daterange-label">🏷️</span>' +
+            '<input type="text" class="db-keyword-input" id="db-lecture-keywords" placeholder="课程名关键字（逗号分隔）" value="' + esc(state.courseNameKeywords || '') + '" title="输入课程名关键字筛选，多个用逗号分隔">' +
+            '<button class="db-kw-bind-btn" id="db-kw-bind" title="保存关键字（不重新拉数据）">✓ 绑定</button>';
+          // 重新绑定"绑定"按钮
+          var newBindBtn = kwArea.querySelector('#db-kw-bind');
+          if (newBindBtn) newBindBtn.addEventListener('click', bindKwHandler);
+          // 回车快速绑定
+          var newKwInput = kwArea.querySelector('#db-lecture-keywords');
+          if (newKwInput) {
+            newKwInput.addEventListener('keydown', function (e) {
+              if (e.key === 'Enter') bindKwHandler();
+            });
+          }
+        }
+      });
+    }
+
+    // "绑定"关键字按钮 → 保存关键字，切回折叠态
+    var kwBindBtn = panelRoot.getElementById('db-kw-bind');
+    if (kwBindBtn) kwBindBtn.addEventListener('click', bindKwHandler);
+    // 回车快速绑定
+    var kwInput = panelRoot.getElementById('db-lecture-keywords');
+    if (kwInput) {
+      kwInput.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') bindKwHandler();
+      });
+    }
+
+    function bindKwHandler() {
+      var input = panelRoot.getElementById('db-lecture-keywords');
+      var newKw = input ? input.value.trim() : '';
+      state.courseNameKeywords = newKw;
+      state._kwEditing = false;
+      saveCourseKeywords(newKw);
+      // 重新渲染关键字区域为折叠态
+      var kwArea = panelRoot.getElementById('db-kw-area');
+      if (kwArea) {
+        if (newKw) {
+          var kws = newKw.split(/[,，\s]+/).filter(Boolean);
+          kwArea.innerHTML = '<span class="db-daterange-label">🏷️</span>' +
+            '<span class="db-kw-tag">' + esc(kws.join('、')) + '</span>' +
+            '<button class="db-kw-edit-btn" id="db-kw-edit" title="编辑筛选条件">✏️</button>';
+        } else {
+          kwArea.innerHTML = '<span class="db-daterange-label">🏷️</span>' +
+            '<input type="text" class="db-keyword-input" id="db-lecture-keywords" placeholder="课程名关键字（逗号分隔）" value="" title="输入课程名关键字筛选，多个用逗号分隔">' +
+            '<button class="db-kw-bind-btn" id="db-kw-bind" title="保存关键字（不重新拉数据）">✓ 绑定</button>';
+        }
+        // 重新绑定事件
+        var newEditBtn = kwArea.querySelector('#db-kw-edit');
+        if (newEditBtn) {
+          newEditBtn.addEventListener('click', function () {
+            state._kwEditing = true;
+            kwArea.innerHTML = '<span class="db-daterange-label">🏷️</span>' +
+              '<input type="text" class="db-keyword-input" id="db-lecture-keywords" placeholder="课程名关键字（逗号分隔）" value="' + esc(state.courseNameKeywords || '') + '" title="输入课程名关键字筛选，多个用逗号分隔">' +
+              '<button class="db-kw-bind-btn" id="db-kw-bind" title="保存关键字（不重新拉数据）">✓ 绑定</button>';
+            var b = kwArea.querySelector('#db-kw-bind');
+            if (b) b.addEventListener('click', bindKwHandler);
+            var i = kwArea.querySelector('#db-lecture-keywords');
+            if (i) i.addEventListener('keydown', function (e) { if (e.key === 'Enter') bindKwHandler(); });
+          });
+        }
+        var newBindBtn = kwArea.querySelector('#db-kw-bind');
+        if (newBindBtn) newBindBtn.addEventListener('click', bindKwHandler);
+        var newKwInput = kwArea.querySelector('#db-lecture-keywords');
+        if (newKwInput) {
+          newKwInput.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter') bindKwHandler();
+          });
+        }
+      }
+    }
+
+    // "应用"按钮 → 手动触发筛选（日期范围 + 关键字）
+    var applyBtn = panelRoot.getElementById('db-apply-filter');
+    if (applyBtn) {
+      applyBtn.addEventListener('click', function () {
+        var dateStartEl = panelRoot.getElementById('db-date-start');
+        var dateEndEl = panelRoot.getElementById('db-date-end');
+        var kwInput = panelRoot.getElementById('db-lecture-keywords');
+        var newStart = dateStartEl ? dateStartEl.value : '';
+        var newEnd = dateEndEl ? dateEndEl.value : '';
+        var newKw = kwInput ? kwInput.value.trim() : state.courseNameKeywords;
+        if (!newStart || !newEnd) {
+          alert('请先选择起始日期和结束日期');
+          return;
+        }
+        // 禁用按钮，防止重复点击
+        applyBtn.disabled = true;
+        applyBtn.textContent = '⏳ 加载中...';
+        saveLectureDateRange(newStart, newEnd);
+        // 保存关键字（同时更新 state + storage）
+        state.courseNameKeywords = newKw;
+        state._kwEditing = false;  // 重置编辑状态
+        saveCourseKeywords(newKw);
+        _scheduleWideCache = null;  // 清缓存，强制重新拉取
+        // 显示 loading
+        panelRoot.innerHTML = '<style>' + buildCSS() + '</style>' +
+          '<div class="db-header"><div class="db-titlebar"><span class="db-title-text">📚 课节视角</span></div><button class="db-close-btn" id="db-close">✕</button></div>' +
+          '<div class="db-viewtabs">' +
+            '<button class="db-viewtab" data-view="date">📅 日期视角</button>' +
+            '<button class="db-viewtab db-viewtab--active" data-view="lecture">📚 课节视角</button>' +
+          '</div>' +
+          '<div class="db-loading-wrap"><div class="db-spinner"></div><span class="db-loading-text">步骤 1/5 · 拉取排课数据...</span><div class="db-progress-bar"><div class="db-progress-fill" style="width:20%"></div></div></div>';
+        var newClose = panelRoot.getElementById('db-close');
+        if (newClose) newClose.addEventListener('click', closePanel);
+        panelRoot.querySelectorAll('.db-viewtab').forEach(function (tab) {
+          tab.addEventListener('click', function () {
+            var mode = this.dataset.view;
+            if (mode !== state.viewMode) switchViewMode(mode);
+          });
+        });
+        _progressLastTime = 0;
+        // 重新拉课程列表（关键字过滤 + 新课节范围）
+        fetchAllCourses().then(function (courses) {
+          var kw = newKw;
+          if (kw) {
+            var kws = kw.split(/[,，\s]+/).filter(Boolean);
+            courses = courses.filter(function (c) {
+              return kws.some(function (k) { return (c.title || '').indexOf(k) !== -1; });
+            });
+          }
+          state.courseList = courses;
+          if (courses.length > 0) {
+            state.lectureCourses = courses.map(function (c) { return c.aiCourseId; });
+          }
+          fetchScheduleWideCached(state.lectureDateStart, state.lectureDateEnd).then(function (allSchedule) {
+            state.lectures = extractLectures(allSchedule, state.lectureCourses);
+            if (state.lectures.length > 0) {
+              var sorted = state.lectures.slice().sort(function (a, b) { return (b.latestDate || '').localeCompare(a.latestDate || ''); });
+              state.lectureLecNum = sorted[0].lecNum;
+            }
+            loadLectureData();
+          }).catch(function (e) { console.error('[DailyBoard] 应用筛选加载失败:', e); });
+        }).catch(function (e) { console.error('[DailyBoard] 应用筛选课程列表失败:', e); });
+      });
+    }
+
     // 课程 chips 点击
     var chips = panelRoot.querySelectorAll('.db-course-chip');
     chips.forEach(function (chip) {
@@ -2512,6 +2809,17 @@
         loadLectureData();
       });
     });
+
+    // 课程 chips 展开/折叠
+    var chipsToggle = panelRoot.getElementById('db-chips-toggle');
+    if (chipsToggle) {
+      chipsToggle.addEventListener('click', function () {
+        var hidden = panelRoot.querySelector('.db-chips-hidden');
+        if (!hidden) return;
+        var isShow = hidden.classList.toggle('db-chips-hidden--show');
+        this.textContent = isShow ? '收起' : this.dataset.collapsedText || '…';
+      });
+    }
 
     // 讲次下拉
     var select = panelRoot.getElementById('db-lecture-select');
@@ -2572,27 +2880,55 @@
   /** 切换视角 */
   function switchViewMode(mode) {
     state.viewMode = mode;
+    state._kwEditing = false;  // 切换视角时重置编辑状态
     _progressLastTime = 0;
     doneMap = {};
 
     if (mode === 'lecture') {
       panelRoot.innerHTML = '<style>' + buildCSS() + '</style>' +
         '<div class="db-header"><div class="db-titlebar"><span class="db-title-text">📚 课节视角</span></div><button class="db-close-btn" id="db-close">✕</button></div>' +
+        '<div class="db-viewtabs">' +
+          '<button class="db-viewtab" data-view="date">📅 日期视角</button>' +
+          '<button class="db-viewtab db-viewtab--active" data-view="lecture">📚 课节视角</button>' +
+        '</div>' +
         '<div class="db-loading-wrap"><div class="db-spinner"></div><span class="db-loading-text">步骤 1/5 · 初始化课程列表...</span><div class="db-progress-bar"><div class="db-progress-fill" style="width:20%"></div></div></div>';
 
       var cb1 = panelRoot.getElementById('db-close');
       if (cb1) cb1.addEventListener('click', closePanel);
+      // 视图 Tab 点击
+      panelRoot.querySelectorAll('.db-viewtab').forEach(function (tab) {
+        tab.addEventListener('click', function () {
+          var mode = this.dataset.view;
+          if (mode !== state.viewMode) switchViewMode(mode);
+        });
+      });
+
+      // 设默认日期范围（上次保存的 > 最近30天）
+      if (!state.lectureDateStart || !state.lectureDateEnd) {
+        var dft = getLectureDateDefault();
+        state.lectureDateStart = dft.start;
+        state.lectureDateEnd = dft.end;
+      }
 
       // 先拉课程列表
       fetchAllCourses().then(function (courses) {
-        state.courseList = courses;
-        // 默认全不选中 → 选中293（如果存在）
-        if (courses.length > 0) {
-          var has293 = courses.some(function (c) { return c.aiCourseId === 293; });
-          state.lectureCourses = has293 ? [293] : [courses[0].aiCourseId];
+        // 关键字过滤课程列表
+        var kw = (state.courseNameKeywords || '').trim();
+        if (kw) {
+          var kws = kw.split(/[,，\s]+/).filter(Boolean);
+          var beforeCount = courses.length;
+          courses = courses.filter(function (c) {
+            return kws.some(function (k) { return (c.title || '').indexOf(k) !== -1; });
+          });
+          console.log('[DailyBoard] 课程关键字过滤:', kws.join('、'), '→', beforeCount + '门→' + courses.length + '门');
         }
-        // 加载全学期数据 → 提取课节 → 默认最近讲次
-        fetchScheduleWideCached('2026-03-01', dateKey()).then(function (allSchedule) {
+        state.courseList = courses;
+        // 默认全选所有命中课程（方便查看所有数据）
+        if (courses.length > 0) {
+          state.lectureCourses = courses.map(function (c) { return c.aiCourseId; });
+        }
+        // 加载日期范围内的数据 → 提取课节 → 默认最近讲次
+        fetchScheduleWideCached(state.lectureDateStart, state.lectureDateEnd).then(function (allSchedule) {
           state.lectures = extractLectures(allSchedule, state.lectureCourses);
           // 默认选中最近讲次
           if (state.lectures.length > 0) {
@@ -2834,6 +3170,35 @@
       '.db-filter-chip:hover{border-color:#4a6cf7;color:#4a6cf7;background:#f8faff;}',
       '.db-filter-chip--active{background:#4a6cf7;color:#fff;border-color:#4a6cf7;box-shadow:0 2px 6px rgba(74,108,247,0.25);}',
       '.db-filter-chip .db-filter-count{opacity:0.75;margin-left:3px;font-weight:400;}',
+      /* 课节控制区 */
+      '.db-lecture-controls{display:flex;align-items:center;gap:12px;padding:8px 14px;background:#f8f9fb;border-bottom:1px solid #e8eaed;flex-shrink:0;flex-wrap:wrap;min-height:40px;}',
+      '.db-lecture-courses{display:flex;gap:5px;flex-wrap:wrap;flex:1 1 auto;min-width:0;align-items:center;}',
+      '.db-course-chip{display:inline-flex;align-items:center;padding:4px 12px;border:1px solid #d0d5dd;border-radius:14px;font-size:12px;cursor:pointer;background:#fff;color:#555;user-select:none;transition:all 0.15s;white-space:nowrap;line-height:1.4;}',
+      '.db-course-chip:hover{border-color:#4a6cf7;color:#4a6cf7;background:#f0f3ff;}',
+      '.db-course-chip--active{background:#4a6cf7;color:#fff;border-color:#4a6cf7;font-weight:600;}',
+      /* 课程chips折叠 */
+      '.db-chips-hidden{display:none !important;}',
+      '.db-chips-hidden--show{display:inline-flex !important;}',
+      '.db-chips-toggle{display:inline-flex;align-items:center;padding:4px 10px;border:1px dashed #d0d5dd;border-radius:14px;font-size:11px;cursor:pointer;background:#f8f9fb;color:#888;user-select:none;transition:all 0.15s;line-height:1.4;}',
+      '.db-chips-toggle:hover{background:#eef0f5;color:#555;border-color:#b0b5bd;}',
+      '.db-keyword-tag{display:inline-flex;align-items:center;padding:3px 10px;border-radius:12px;font-size:11px;background:#fff3e0;color:#e65100;border:1px solid #ffe0b2;white-space:nowrap;margin-left:4px;}',
+      '.db-lecture-picker{display:flex;align-items:center;gap:8px;font-size:13px;flex-shrink:0;white-space:nowrap;padding:2px 0;}',
+      '.db-lecture-select{font-size:13px;padding:5px 28px 5px 10px;border:1px solid #d0d5dd;border-radius:6px;background:#fff;color:#333;cursor:pointer;max-width:260px;outline:none;-webkit-appearance:auto;appearance:auto;}',
+      '.db-lecture-select:focus{border-color:#4a6cf7;box-shadow:0 0 0 2px rgba(74,108,247,0.15);}',
+      '.db-lecture-meta{font-size:12px;color:#888;flex-shrink:0;}',
+      '.db-daterange-label{font-size:14px;}',
+      '.db-daterange-sep{color:#999;font-size:12px;}',
+      '.db-date-input{font-size:12px;padding:4px 8px;border:1px solid #d0d5dd;border-radius:6px;background:#fff;color:#333;cursor:pointer;outline:none;width:128px;}',
+      '.db-date-input:hover::-webkit-calendar-picker-indicator{opacity:1;}',
+      '.db-apply-btn{padding:5px 14px;border:1px solid #4a6cf7;border-radius:6px;background:#4a6cf7;color:#fff;font-size:12px;cursor:pointer;font-weight:500;white-space:nowrap;transition:all 0.15s;}',
+      '.db-apply-btn:hover{background:#3b5ce4;border-color:#3b5ce4;}',
+      '.db-apply-btn:disabled{background:#aaa;border-color:#aaa;cursor:not-allowed;}',
+      '.db-lecture-filter-row{display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;}',
+      '.db-filter-sep{width:1px;height:20px;background:#d0d5dd;margin:0 2px;flex-shrink:0;}',
+      '.db-kw-area{display:flex;align-items:center;gap:6px;flex:1 1 auto;min-width:0;overflow:hidden;}','.db-kw-tag{max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;color:#333;background:#e8f0fe;padding:2px 8px;border-radius:4px;border:1px solid #c4d7f2;flex-shrink:1;}',
+      '.db-kw-bind-btn{padding:4px 12px;border:1px solid #2e7d32;border-radius:6px;background:#e8f5e9;color:#2e7d32;font-size:12px;cursor:pointer;font-weight:500;white-space:nowrap;transition:all 0.15s;}',
+      '.db-kw-bind-btn:hover{background:#c8e6c9;border-color:#1b5e20;color:#1b5e20;}',
+      '.db-keyword-input{flex:1;min-width:0;padding:4px 8px;border:1px solid #d0d5dd;border-radius:6px;font-size:12px;outline:none;}',
       /* 学情表绑定 */
       '.db-bind-banner{padding:8px 14px;font-size:12px;color:#888;background:#fff8e1;border-bottom:1px solid #ffe082;flex-shrink:0;}',
       '.db-bind-banner a{cursor:pointer;color:#4a6cf7;text-decoration:underline;font-weight:500;}',

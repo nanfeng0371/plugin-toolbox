@@ -1,7 +1,8 @@
 /**
- * 调课助手 v4.0 — Toolbox 模块化版本（content.js）
+ * 调课助手 v4.1.0 — Toolbox 模块化版本（content.js）
  * 合并自 popup.js（UI逻辑）+ content/content.js（API调用）
  * 改动：popup→Shadow DOM 模块；API调用直接在 content script 执行；xlsx 解析委托 background
+ * v4.1.0: 三段式课程匹配 — 支持输入课程名关键词，多结果时自动报错
  */
 (function () {
   'use strict';
@@ -642,11 +643,36 @@
       if (cnLesson && CN_NUM_MAP[cnLesson[1]]) periodSort = CN_NUM_MAP[cnLesson[1]];
     }
     if (!periodSort || periodSort < 1) return null;
+
+    // 🆕 提取课程名关键词："暑假课第1讲" / "期末冲刺课 第1讲"
+    let courseKeyword = '';
+    var coursePatterns = [
+      new RegExp('([\\u4e00-\\u9fa5]{2,8})\\s*第\\s*' + periodSort + '\\s*(?:讲|课|次)?'),
+      new RegExp('([\\u4e00-\\u9fa5]{2,8})\\s*\\(?[Zz]?\\)?\\s*第\\s*' + periodSort + '\\s*(?:讲|课|次)?')
+    ];
+    for (var cpi = 0; cpi < coursePatterns.length && !courseKeyword; cpi++) {
+      var cm = text.match(coursePatterns[cpi]);
+      if (cm && cm[1]) {
+        var ckw = cm[1].trim();
+        // 排除纯姓名（2字且在已知学员名中）
+        var isKnownName = false;
+        if (studentRoster.length > 0 && ckw.length === 2) {
+          isKnownName = studentRoster.some(function (s) { return s.name === ckw || s.matchedName === ckw; });
+        }
+        if (!isKnownName) courseKeyword = ckw;
+      }
+    }
+    // 也检查自然语言中的 "X课" 模式：暑假课、期末冲刺课
+    if (!courseKeyword) {
+      var cnMatch = text.match(/([\\u4e00-\\u9fa5]{3,8})(?:课|课程)\\s*(?:[,，\\s]|$|第|\\(Z\\))/);
+      if (cnMatch) courseKeyword = cnMatch[1].trim();
+    }
+
     let phoneMatch = text.match(/1[3-9]\d{9}/);
     let rawPhone = phoneMatch ? phoneMatch[0] : '';
     // 提取ID：行首或独立存在的5位以上纯数字
     let idMatch = text.match(/(?:^|[,，\s])(\d{5,})(?:[,，\s第\d]|$)/) || text.match(/^(\d{5,})/);
-    let rawId = idMatch ? idMatch[1] || idMatch[0] : '';
+    let rawId = idMatch ? (idMatch[1] || idMatch[0]) : '';
     // 提取姓名：去掉讲次/日期/时间/关键词后，剩余中文字
     let cleaned = text.replace(/第\s*\d+\s*(?:讲|课|次)?/, '').replace(/第[一二三四五六七八九十]+\s*(?:讲|课|次)?/, '')
       .replace(/\d+\s*(?:讲|课|次)/, '')
@@ -655,6 +681,8 @@
       .replace(/\d{1,2}点半/g, '').replace(/\d{1,2}:\d{2}/g, '').replace(/\d{1,2}\.\d{2}/g, '')
       .replace(/今天|明天|后天|大后天|昨天/g, '').replace(/(?:下|这)?(?:周|星期)[一二三四五六日天]/g, '')
       .replace(/早上|上午|下午|晚上|凌晨|中午|午后|晚间/g, '').replace(/[,，、\s\d]/g, '');
+    // 也去掉课程关键词
+    if (courseKeyword) cleaned = cleaned.replace(courseKeyword, '');
     let nameMatch = cleaned.match(/[\u4e00-\u9fa5]{2,4}/);
     let rawName = nameMatch ? nameMatch[0] : '';
     if (!rawName && !rawPhone && !rawId) return null;
@@ -665,7 +693,7 @@
     let newTime = parseNaturalTime(text);
     if (!newTime) return null;
     // rawName 优先用中文名，如果有纯数字ID则放到 rawId 里
-    return { rawName: rawName, rawPhone: rawPhone, rawId: rawId, periodSort: periodSort, newDate: newDate, newTime: newTime };
+    return { rawName: rawName, rawPhone: rawPhone, rawId: rawId, periodSort: periodSort, newDate: newDate, newTime: newTime, courseKeyword: courseKeyword };
   }
 
   // ===== 学员匹配 =====
@@ -706,7 +734,7 @@
       if (/学员|第几讲|日期|时间|姓名|手机|ID/i.test(line) && /[,，\t\s]/.test(line) && line.length < 30) continue;
       let task = parseOneLine(line, i);
       if (!task) { addLog('第' + (i + 1) + '行无法解析: ' + line.substring(0, 60), 'warn'); continue; }
-      tasks.push({ index: tasks.length + 1, userId: task.userId, periodSort: task.periodSort, newDate: task.newDate, newTime: task.newTime, matchedName: task.matchedName || '', status: TASK_STATUS.PENDING, error: '', detail: null });
+      tasks.push({ index: tasks.length + 1, userId: task.userId, periodSort: task.periodSort, newDate: task.newDate, newTime: task.newTime, matchedName: task.matchedName || '', courseKeyword: task.courseKeyword || '', status: TASK_STATUS.PENDING, error: '', detail: null });
     }
     return tasks;
   }
@@ -718,20 +746,20 @@
       if (nl) {
         // rawId（纯数字ID，如741191）优先
         if (nl.rawId) {
-          return { userId: nl.rawId, periodSort: nl.periodSort, newDate: nl.newDate, newTime: nl.newTime };
+          return { userId: nl.rawId, periodSort: nl.periodSort, newDate: nl.newDate, newTime: nl.newTime, courseKeyword: nl.courseKeyword || '' };
         }
         // 手机号匹配
         if (nl.rawPhone && /^1[3-9]\d{9}$/.test(nl.rawPhone) && studentRoster.length > 0) {
           let m = matchStudent(nl.rawName, nl.rawPhone);
-          if (m && m.studentId) return { userId: m.studentId, periodSort: nl.periodSort, newDate: nl.newDate, newTime: nl.newTime, matchedName: m.matchedName };
+          if (m && m.studentId) return { userId: m.studentId, periodSort: nl.periodSort, newDate: nl.newDate, newTime: nl.newTime, matchedName: m.matchedName, courseKeyword: nl.courseKeyword || '' };
         }
         // 中文名当ID（纯数字的情况已在 rawId 处理）
         if (nl.rawName && /^\d{5,}$/.test(nl.rawName)) {
-          return { userId: nl.rawName, periodSort: nl.periodSort, newDate: nl.newDate, newTime: nl.newTime };
+          return { userId: nl.rawName, periodSort: nl.periodSort, newDate: nl.newDate, newTime: nl.newTime, courseKeyword: nl.courseKeyword || '' };
         }
         if (nl.rawName && studentRoster.length > 0) {
           let m2 = matchStudent(nl.rawName, nl.rawPhone);
-          if (m2 && m2.studentId) return { userId: m2.studentId, periodSort: nl.periodSort, newDate: nl.newDate, newTime: nl.newTime, matchedName: m2.matchedName };
+          if (m2 && m2.studentId) return { userId: m2.studentId, periodSort: nl.periodSort, newDate: nl.newDate, newTime: nl.newTime, matchedName: m2.matchedName, courseKeyword: nl.courseKeyword || '' };
           return null;
         }
       }
@@ -746,14 +774,14 @@
     let nl2 = parseNaturalLanguage(line);
     if (nl2) {
       if (nl2.rawId) {
-        return { userId: nl2.rawId, periodSort: nl2.periodSort, newDate: nl2.newDate, newTime: nl2.newTime };
+        return { userId: nl2.rawId, periodSort: nl2.periodSort, newDate: nl2.newDate, newTime: nl2.newTime, courseKeyword: nl2.courseKeyword || '' };
       }
       if (nl2.rawName && /^\d{5,}$/.test(nl2.rawName)) {
-        return { userId: nl2.rawName, periodSort: nl2.periodSort, newDate: nl2.newDate, newTime: nl2.newTime };
+        return { userId: nl2.rawName, periodSort: nl2.periodSort, newDate: nl2.newDate, newTime: nl2.newTime, courseKeyword: nl2.courseKeyword || '' };
       }
       if (nl2.rawName && studentRoster.length > 0) {
         let m3 = matchStudent(nl2.rawName, nl2.rawPhone);
-        if (m3 && m3.studentId) return { userId: m3.studentId, periodSort: nl2.periodSort, newDate: nl2.newDate, newTime: nl2.newTime, matchedName: m3.matchedName };
+        if (m3 && m3.studentId) return { userId: m3.studentId, periodSort: nl2.periodSort, newDate: nl2.newDate, newTime: nl2.newTime, matchedName: m3.matchedName, courseKeyword: nl2.courseKeyword || '' };
       }
     }
 
@@ -787,6 +815,7 @@
     let timeVal = '';
     let nameVal = '';
     let phoneVal = '';
+    let courseKeyword = '';
 
     for (var fi = 0; fi < fields.length; fi++) {
       let cls = classifyField(fields[fi]);
@@ -799,8 +828,19 @@
         if (!dateVal) dateVal = cls.datePart;
         if (!timeVal) timeVal = cls.timePart;
       }
-      else if (cls.type === 'name' && !nameVal) nameVal = cls.value;
+      else if (cls.type === 'name') {
+        if (!nameVal) nameVal = cls.value;
+        else if (!courseKeyword) courseKeyword = cls.value; // 第二个中文名 → 课程名
+      }
       else if (cls.type === 'phone' && !phoneVal) phoneVal = cls.value;
+    }
+
+    // 兜底：扫描未分类的3-8字中文作为课程名
+    if (!courseKeyword) {
+      for (var fj = 0; fj < fields.length; fj++) {
+        var s = fields[fj].trim();
+        if (/^[\u4e00-\u9fa5]{3,8}$/.test(s) && s !== nameVal) { courseKeyword = s; break; }
+      }
     }
 
     // 如果有 userId 直接用；否则尝试姓名匹配信息簿
@@ -825,7 +865,7 @@
     let newTime = timeVal ? normalizeTime(timeVal) : null;
 
     if (userId && periodSort !== null && newDate && newTime) {
-      return { userId: userId, periodSort: periodSort, newDate: newDate, newTime: newTime };
+      return { userId: userId, periodSort: periodSort, newDate: newDate, newTime: newTime, courseKeyword: courseKeyword };
     }
     return null;
   }
@@ -864,10 +904,11 @@
       let tr = document.createElement('tr');
       tr.id = 'tk-task-row-' + task.index;
       let displayId = task.matchedName ? task.userId + ' (' + task.matchedName + ')' : task.userId;
+      let periodDisplay = task.courseKeyword ? task.periodSort + ' (' + task.courseKeyword + ')' : task.periodSort;
       tr.innerHTML =
         '<td>' + task.index + '</td>' +
         '<td>' + displayId + '</td>' +
-        '<td>' + task.periodSort + '</td>' +
+        '<td>' + periodDisplay + '</td>' +
         '<td>' + task.newDate + '</td>' +
         '<td>' + task.newTime + '</td>' +
         '<td class="' + (STATUS_CSS[task.status] || '') + '">' + (STATUS_LABELS[task.status] || '') + '</td>';
@@ -992,12 +1033,36 @@
     return match ? parseInt(match[1], 10) : 0;
   }
 
-  function matchTargetClass(classList, userId, periodSort) {
-    return classList.find(function (item) {
-      let itemUserId = String(item.studentId || item.userId || '');
-      let itemPS = extractPeriodSort(item);
+  function matchTargetClass(classList, userId, periodSort, courseKeyword) {
+    // 🆕 三段式匹配：有课程名 → 精确；无课程名且唯一 → 老逻辑；无课程名且多个 → 报 _ambiguous
+    if (courseKeyword) {
+      // 精确匹配：学生 + 讲次 + 课程名关键词
+      return classList.find(function (item) {
+        var itemUserId = String(item.studentId || item.userId || '');
+        var itemPS = extractPeriodSort(item);
+        if (itemUserId !== String(userId) || itemPS !== Number(periodSort)) return false;
+        var cName = (item.courseName || item.className || '').toLowerCase();
+        return cName.indexOf(courseKeyword.toLowerCase()) !== -1;
+      }) || null;
+    }
+
+    // 模糊匹配：学生 + 讲次（不限制课程）
+    var allMatches = classList.filter(function (item) {
+      var itemUserId = String(item.studentId || item.userId || '');
+      var itemPS = extractPeriodSort(item);
       return itemUserId === String(userId) && itemPS === Number(periodSort);
-    }) || null;
+    });
+
+    if (allMatches.length === 0) return null;
+    if (allMatches.length === 1) return allMatches[0];
+
+    // 多个匹配 → 返回标记对象
+    var courseNames = [];
+    allMatches.forEach(function (item) {
+      var cn = (item.courseName || item.className || '').trim();
+      if (cn && courseNames.indexOf(cn) === -1) courseNames.push(cn);
+    });
+    return { _ambiguous: true, matches: allMatches, courseNames: courseNames, userId: userId, periodSort: periodSort };
   }
 
   async function executeSingleTask(task) {
@@ -1010,8 +1075,21 @@
       if (!Array.isArray(classListCache) || classListCache.length === 0) {
         return { success: false, error: '课表数据为空' };
       }
-      let targetClass = matchTargetClass(classListCache, task.userId, task.periodSort);
-      if (!targetClass) return { success: false, error: '未找到学员' + task.userId + '第' + task.periodSort + '讲的课程数据' };
+      let targetClass = matchTargetClass(classListCache, task.userId, task.periodSort, task.courseKeyword || '');
+      if (!targetClass) {
+        if (task.courseKeyword) {
+          return { success: false, error: '未找到包含"' + task.courseKeyword + '"的第' + task.periodSort + '讲课程' };
+        }
+        return { success: false, error: '未找到学员' + task.userId + '第' + task.periodSort + '讲的课程数据' };
+      }
+      // 🆕 检测多结果歧义
+      if (targetClass._ambiguous) {
+        var names = targetClass.courseNames || [];
+        var tips = '第' + targetClass.periodSort + '讲匹配到' + names.length + '门课，请指定课程名：\n';
+        tips += '  可选：' + names.join('、') + '\n';
+        tips += '  输入示例：学员ID  ' + targetClass.periodSort + '  日期  时间  ' + names[0];
+        return { success: false, error: tips };
+      }
 
       let courseId = String(targetClass.courseId || '');
       let aiCourseId = String(targetClass.aiCourseId || '');

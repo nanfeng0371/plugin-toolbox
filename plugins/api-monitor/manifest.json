@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "API 接口监听器",
-  "version": "1.2.0",
-  "description": "拦截 aitutor100 课堂页面 fetch/XHR 请求，导出完整接口数据供分析",
+  "version": "1.3.0",
+  "description": "全面页面诊断工具：API拦截 + DOM扫描 + 操作录制 + 诊断报告导出",
   "permissions": [
     "activeTab",
     "storage",

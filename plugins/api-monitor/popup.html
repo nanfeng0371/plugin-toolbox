@@ -41,7 +41,7 @@
 </head>
 <body>
   <div class="header">
-    <span class="title">📡 API 监听器 <small style="font-size:10px;opacity:.6">v1.1.0</small></span>
+    <span class="title">📡 API 监听器 <small style="font-size:10px;opacity:.6">v1.3.0</small></span>
     <span class="badge" id="countBadge">0 条</span>
   </div>
 
@@ -49,7 +49,13 @@
     <button class="btn primary" id="btnToggle">⏸ 停止</button>
     <button class="btn" id="btnClear">🗑 清空</button>
     <button class="btn btn-export-full" id="btnExportAll">📥 导出全部</button>
-    <button class="btn btn-test" id="btnTestFetch" title="测试当前页面能否直接调用爱芯 API">🧪 同源测试</button>
+    <button class="btn btn-test" id="btnTestFetch" title="测试当前页面能否直接调用爱芯 API">🧪 同源</button>
+  </div>
+  <div class="toolbar" id="diagToolbar" style="padding-top:0;">
+    <button class="btn btn-scan" id="btnScanDom" title="扫描当前页面的 DOM 结构（表格/输入框/按钮）">🔍 扫描页面</button>
+    <button class="btn btn-record" id="btnStartRecord" title="开始录制用户操作（点击/输入）">⏺ 录制</button>
+    <button class="btn" id="btnStopRecord" title="停止录制" disabled>⏹ 停止</button>
+    <button class="btn btn-report" id="btnGenReport" title="生成完整诊断报告（DOM + 操作 + API）">📋 诊断报告</button>
   </div>
 
   <!-- 统计栏 -->
@@ -68,6 +74,23 @@
       <button class="btn small" id="btnCloseOrigin" style="line-height:1;">✕</button>
     </div>
     <div class="origin-body" id="originBody"></div>
+  </div>
+
+  <!-- 🆕 诊断面板 -->
+  <div class="origin-panel" id="diagPanel" style="display:none;">
+    <div class="origin-header">
+      <span id="diagPanelTitle">🔍 诊断</span>
+      <div style="display:flex;gap:4px;">
+        <button class="btn small" id="btnExportDiag" title="导出诊断数据为 JSON">📥 导出</button>
+        <button class="btn small" id="btnCloseDiag" style="line-height:1;">✕</button>
+      </div>
+    </div>
+    <div class="origin-body" id="diagBody" style="max-height:300px;overflow-y:auto;"></div>
+  </div>
+
+  <!-- 🆕 录制状态提示 -->
+  <div class="recording-bar" id="recordingBar" style="display:none;">
+    <span class="rec-dot"></span> 录制中... <span id="recTime">00:00</span>
   </div>
 
   <!-- 筛选行 -->

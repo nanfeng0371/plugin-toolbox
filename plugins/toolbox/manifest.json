@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "插件工作箱",
-  "version": "2.2.81",
+  "version": "2.2.103",
   "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEArrtgYsAJvUwDws7+KgwlAuFcKfM/UQHOJelddUOsgQCi77jpf/37f1EAc6hny2eTwhXYonMaNW0HON8WOFmHXTh8sIN/XjzVhyMkYFgPpo1Nw5+q8gooal96kBRJNaGm/xVV4LQdWVNysHWeSFYBxuSXf4SvkK0FXlxMCKi/ygIJMw8KYBc511+BhfAX70yuoVrOiIUK7ggSUe+O8lHVBJ+s+wpnSwWaaesyoMMteUfhApY/bHmNsQ8Y2/Xc0RuAnW8nxK+csnUHz3mm1Dh/Aw/xBpEhucQLM4dRKwFPO6FkTRh4iFc5VorqhPTym20HHZUs1Q1Suk39HfvE2R8/4QIDAQAB",
   "update_url": "https://renewal-calendar-7ff2rtj4f876144-1259283480.tcloudbaseapp.com/extensions/toolbox/update.xml",
   "description": "辅导老师统一工作入口：学习报告、页面表格提取、调课助手等插件一站式管理",
