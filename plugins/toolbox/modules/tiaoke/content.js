@@ -1,8 +1,9 @@
 /**
- * 调课助手 v4.1.0 — Toolbox 模块化版本（content.js）
+ * 调课助手 v4.2.0 — Toolbox 模块化版本（content.js）
  * 合并自 popup.js（UI逻辑）+ content/content.js（API调用）
  * 改动：popup→Shadow DOM 模块；API调用直接在 content script 执行；xlsx 解析委托 background
  * v4.1.0: 三段式课程匹配 — 支持输入课程名关键词，多结果时自动报错
+ * v4.2.0: 新增排课功能 — 学生进班首次排课，支持自定义星期，独立Tab
  */
 (function () {
   'use strict';
@@ -87,6 +88,7 @@
       // 内部 Tab 切换
       '<div class="tk-tab-bar">' +
       '  <button class="tk-tab-btn tk-tab-active" data-itab="main">📚 调课</button>' +
+      '  <button class="tk-tab-btn" data-itab="schedule">📝 排课</button>' +
       '  <button class="tk-tab-btn" data-itab="token">🔑 Token</button>' +
       '  <button class="tk-tab-btn" data-itab="history">📜 历史</button>' +
       '</div>' +
@@ -185,6 +187,60 @@
       '  </div>' +
       '</div>' +
 
+      // === 排课面板 ===
+      '<div class="tk-tab-panel" data-ipanel="schedule">' +
+      '  <!-- 模板下载 -->' +
+      '  <div class="tk-input-section" style="padding-bottom:4px;">' +
+      '    <label class="tk-section-label">📝 批量排课</label>' +
+      '    <button id="tk-btn-download-schedule-tpl" class="tk-btn tk-btn-outline">📥 下载Excel模板</button>' +
+      '    <div class="tk-input-hint">下载模板 → Excel批量填写 → 全选复制 → 粘贴到下方</div>' +
+      '  </div>' +
+      '  <!-- 数据输入 -->' +
+      '  <div class="tk-input-section">' +
+      '    <textarea id="tk-input-schedule" class="tk-textarea" rows="6" placeholder="学员ID	首课日期	上课时间	课程名	星期（必填）&#10;1425217	2026-07-10	14:00	暑假课	1234567&#10;1385357	2026-07-10	16:00	暑假课	一二三四&#10;&#10;星期格式：1234567 / 一二三四五六日 / 周一周二周三..."></textarea>' +
+      '    <div class="tk-input-hint">5列：学员ID | 首课日期 | 上课时间 | 课程名 | 星期（必填）</div>' +
+      '    <div id="tk-schedule-feedback" class="tk-parse-feedback tk-hidden"></div>' +
+      '    <button id="tk-btn-parse-schedule" class="tk-btn tk-btn-primary">解析数据</button>' +
+      '  </div>' +
+      '  <!-- 预览表格 -->' +
+      '  <div id="tk-schedule-preview-section" class="tk-preview-section tk-hidden">' +
+      '    <label class="tk-section-label">数据预览</label>' +
+      '    <div class="tk-table-wrapper">' +
+      '      <table class="tk-preview-table"><thead><tr>' +
+      '        <th class="tk-col-index">#</th><th class="tk-col-id">学员ID</th>' +
+      '        <th class="tk-col-lesson">课程</th><th class="tk-col-date">首课日期</th>' +
+      '        <th class="tk-col-time">上课时间</th><th class="tk-col-time">星期</th>' +
+      '        <th class="tk-col-status">状态</th>' +
+      '      </tr></thead><tbody id="tk-schedule-tbody"></tbody></table>' +
+      '    </div>' +
+      '  </div>' +
+      '  <!-- 执行控制 -->' +
+      '  <div id="tk-schedule-control-section" class="tk-control-section tk-hidden">' +
+      '    <div class="tk-control-buttons">' +
+      '      <button id="tk-btn-start-schedule" class="tk-btn tk-btn-success">▶ 开始排课</button>' +
+      '      <button id="tk-btn-pause-schedule" class="tk-btn tk-btn-warning" disabled>⏸ 暂停</button>' +
+      '      <button id="tk-btn-retry-schedule" class="tk-btn tk-btn-info" disabled>🔄 重试失败</button>' +
+      '    </div>' +
+      '  </div>' +
+      '  <!-- 进度与统计 -->' +
+      '  <div id="tk-schedule-stats-section" class="tk-stats-section tk-hidden">' +
+      '    <div class="tk-progress-bar-wrapper"><div id="tk-schedule-progress-bar" class="tk-progress-bar" style="width:0%"></div></div>' +
+      '    <div class="tk-stats-row">' +
+      '      <span class="tk-stat-item tk-stat-total">总计: <b id="tk-schedule-stat-total">0</b></span>' +
+      '      <span class="tk-stat-item tk-stat-success">✅ 成功: <b id="tk-schedule-stat-success">0</b></span>' +
+      '      <span class="tk-stat-item tk-stat-fail">❌ 失败: <b id="tk-schedule-stat-fail">0</b></span>' +
+      '      <span class="tk-stat-item tk-stat-pending">⏳ 待执行: <b id="tk-schedule-stat-pending">0</b></span>' +
+      '    </div>' +
+      '  </div>' +
+      '  <!-- 日志 -->' +
+      '  <div id="tk-schedule-log-section" class="tk-log-section tk-hidden">' +
+      '    <div class="tk-log-header">' +
+      '      <label class="tk-section-label">执行日志</label>' +
+      '    </div>' +
+      '    <div id="tk-schedule-log-container" class="tk-log-container"></div>' +
+      '  </div>' +
+      '</div>' +
+
       // === 历史面板 ===
       '<div class="tk-tab-panel" data-ipanel="history">' +
       '  <div class="tk-history-header">' +
@@ -242,6 +298,28 @@
 
     // 解析
     $('#tk-btn-parse').addEventListener('click', parseAndPreview);
+
+    // 🆕 排课：模板下载
+    var downloadTplBtn = $('#tk-btn-download-schedule-tpl');
+    if (downloadTplBtn) downloadTplBtn.addEventListener('click', downloadScheduleTemplate);
+    // 🆕 排课：解析
+    var parseScheduleBtn = $('#tk-btn-parse-schedule');
+    if (parseScheduleBtn) parseScheduleBtn.addEventListener('click', parseScheduleAndPreview);
+    // 🆕 排课：执行控制
+    var startScheduleBtn = $('#tk-btn-start-schedule');
+    if (startScheduleBtn) startScheduleBtn.addEventListener('click', function () { if (!isRunning) executeScheduleTasks(); });
+    var pauseScheduleBtn = $('#tk-btn-pause-schedule');
+    if (pauseScheduleBtn) pauseScheduleBtn.addEventListener('click', function () {
+      if (!isRunning) return;
+      isPaused = !isPaused;
+      addScheduleLog(isPaused ? '已暂停执行' : '继续执行', isPaused ? 'warn' : 'info');
+      updateScheduleControlButtons();
+    });
+    var retryScheduleBtn = $('#tk-btn-retry-schedule');
+    if (retryScheduleBtn) retryScheduleBtn.addEventListener('click', function () { if (!isRunning) retryScheduleFailed(); });
+
+    // 执行控制
+    $('#tk-btn-start').addEventListener('click', function () { if (!isRunning) executeTasks(); });
 
     // 执行控制
     $('#tk-btn-start').addEventListener('click', function () { if (!isRunning) executeTasks(); });
@@ -1353,4 +1431,232 @@
     console.log('[调课助手] 模块初始化完成');
   }
 
+  // ======================================================================
+  // 🆕 排课功能
+  // ======================================================================
+  var scheduleTaskList = [];
+  var SCHEDULE_STATUS = { PENDING: 'PENDING', RUNNING: 'RUNNING', SUCCESS: 'SUCCESS', FAIL: 'FAIL' };
+  var SCHEDULE_STATUS_CSS = { PENDING: 'tk-status-pending', RUNNING: 'tk-status-running', SUCCESS: 'tk-status-success', FAIL: 'tk-status-fail' };
+  var SCHEDULE_STATUS_LABELS = { PENDING: '⏳待排', RUNNING: '🔄排课中', SUCCESS: '✅已排', FAIL: '❌失败' };
+
+  function parseWeek(str) {
+    if (!str || !str.trim()) return null;
+    var s = str.trim();
+    // 数字格式：1234567
+    if (/^[1-7]+$/.test(s)) { var arr = []; for (var i = 0; i < s.length; i++) { var d = parseInt(s[i]); if (arr.indexOf(d) < 0) arr.push(d); } return arr.sort(); }
+    // 中文：一 = 周一 → 1
+    var map = { '一':1,'二':2,'三':3,'四':4,'五':5,'六':6,'日':7,'天':7 };
+    var cn = s.replace(/周|星期/g, '');
+    if (/^[一二三四五六日天]+$/.test(cn)) { var arr2 = []; for (var j = 0; j < cn.length; j++) { var d2 = map[cn[j]]; if (d2 && arr2.indexOf(d2) < 0) arr2.push(d2); } return arr2.sort(); }
+    return null;
+  }
+
+  function weeksToDisplay(weeks) {
+    if (!weeks || !weeks.length) return '?';
+    var chars = ['日','一','二','三','四','五','六'];
+    return weeks.map(function(d) { return chars[d]; }).join('');
+  }
+
+  function downloadScheduleTemplate() {
+    sendMsg({target: 'tiaoke', action: 'GENERATE_XLSX'}).then(function (resp) {
+      var result = (resp && resp.data) ? resp.data : resp;
+      if (result && result.xlsxBase64) {
+        var byteChars = atob(result.xlsxBase64);
+        var byteChars = atob(result.xlsxBase64);
+        var byteNums = new Array(byteChars.length);
+        for (var i = 0; i < byteChars.length; i++) byteNums[i] = byteChars.charCodeAt(i);
+        var blob = new Blob([new Uint8Array(byteNums)], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+        var a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = '排课模板.xlsx'; a.click();
+        addScheduleLog('模板已下载: 排课模板.xlsx', 'success');
+      } else {
+        addScheduleLog('模板生成失败: ' + (result && result.error || '未知错误'), 'fail');
+      }
+    }).catch(function (e) { addScheduleLog('模板生成失败: ' + e.message, 'fail'); });
+  }
+
+  function parseScheduleInput(text) {
+    var lines = text.trim().split('\n');
+    var tasks = [];
+    for (var i = 0; i < lines.length; i++) {
+      var line = lines[i].trim();
+      if (!line) continue;
+      if (/学员ID|首课日期|上课时间|课程名|星期/.test(line) && /[\t,，]/.test(line) && line.length < 30) continue;
+      var fields = line.split('\t').map(function(s){return s.trim();}).filter(function(s){return s;});
+      if (fields.length < 4) {
+        addScheduleLog('第'+(i+1)+'行数据不足（需5列）：'+line.substring(0,60),'warn');
+        tasks.push({ index:tasks.length+1, userId:'', courseKeyword:'', newDate:'', newTime:'', weeks:null, weeksDisplay:'', status:SCHEDULE_STATUS.FAIL, error:'数据列不足', detail:null });
+        continue;
+      }
+      var userId = fields[0];
+      var dateStr = fields[1];
+      var timeStr = fields[2];
+      var courseKeyword = fields[3];
+      var weekStr = fields[4] || '';
+      var weeks = parseWeek(weekStr);
+      if (!weeks) {
+        tasks.push({ index:tasks.length+1, userId:userId, courseKeyword:courseKeyword, newDate:dateStr, newTime:timeStr, weeks:null, weeksDisplay:weekStr||'(未填)', status:SCHEDULE_STATUS.FAIL, error:'星期未填或格式错误', detail:null });
+        addScheduleLog('第'+(i+1)+'行星期参数无效: '+weekStr,'warn');
+        continue;
+      }
+      if (!/^\d{5,}$/.test(userId)) {
+        if (userId.indexOf('示例') >= 0) continue; // 跳过示例行
+        addScheduleLog('第'+(i+1)+'行学员ID无效: '+userId,'warn'); continue;
+      }
+      tasks.push({ index:tasks.length+1, userId:userId, courseKeyword:courseKeyword, newDate:normalizeDate(dateStr), newTime:normalizeTime(timeStr), weeks:weeks, weeksDisplay:weeksToDisplay(weeks), status:SCHEDULE_STATUS.PENDING, error:'', detail:null });
+    }
+    return tasks;
+  }
+
+  function parseScheduleAndPreview() {
+    var text = $('#tk-input-schedule').value.trim();
+    if (!text) { showScheduleFeedback('请先粘贴排课数据','error'); return; }
+    isRunning = false; isPaused = false;
+    $('#tk-schedule-log-container').innerHTML = '';
+    hideScheduleFeedback();
+    $('#tk-schedule-log-section').classList.remove('tk-hidden');
+    scheduleTaskList = parseScheduleInput(text);
+    if (scheduleTaskList.length === 0) {
+      showScheduleFeedback('未解析到有效数据','error');
+      addScheduleLog('未解析到有效数据','fail');
+      return;
+    }
+    var valid = scheduleTaskList.filter(function(t){return t.status===SCHEDULE_STATUS.PENDING;}).length;
+    var failed = scheduleTaskList.length - valid;
+    showScheduleFeedback('解析 ' + scheduleTaskList.length + ' 条（'+valid+'条可排'+(failed>0?'，'+failed+'条失败':'')+'）', failed>0?'warn':'success');
+    addScheduleLog('解析 ' + scheduleTaskList.length + ' 条排课数据', 'success');
+    renderSchedulePreviewTable();
+    updateScheduleStats();
+    $('#tk-schedule-preview-section').classList.remove('tk-hidden');
+    $('#tk-schedule-control-section').classList.remove('tk-hidden');
+    $('#tk-schedule-stats-section').classList.remove('tk-hidden');
+    updateScheduleControlButtons();
+  }
+
+  function renderSchedulePreviewTable() {
+    var tbody = $('#tk-schedule-tbody');
+    tbody.innerHTML = '';
+    scheduleTaskList.forEach(function(task) {
+      var tr = document.createElement('tr');
+      tr.id = 'tk-schedule-row-' + task.index;
+      tr.innerHTML = '<td>' + task.index + '</td><td>' + task.userId + '</td><td>' + (task.courseKeyword||'') + '</td><td>' + (task.newDate||'') + '</td><td>' + (task.newTime||'') + '</td><td>' + task.weeksDisplay + '</td><td class="'+(SCHEDULE_STATUS_CSS[task.status]||'')+'">'+(SCHEDULE_STATUS_LABELS[task.status]||'')+'</td>';
+      tbody.appendChild(tr);
+    });
+  }
+
+  function updateScheduleRowStatus(index) {
+    var task = scheduleTaskList.find(function(t){return t.index===index;});
+    if (!task) return;
+    var row = $('#tk-schedule-row-' + index);
+    if (!row) return;
+    var cell = row.querySelector('td:last-child');
+    cell.className = SCHEDULE_STATUS_CSS[task.status] || '';
+    cell.textContent = SCHEDULE_STATUS_LABELS[task.status] || '';
+  }
+
+  function updateScheduleStats() {
+    var total = scheduleTaskList.length;
+    var success = scheduleTaskList.filter(function(t){return t.status===SCHEDULE_STATUS.SUCCESS;}).length;
+    var fail = scheduleTaskList.filter(function(t){return t.status===SCHEDULE_STATUS.FAIL;}).length;
+    var pending = total - success - fail;
+    $('#tk-schedule-stat-total').textContent = total;
+    $('#tk-schedule-stat-success').textContent = success;
+    $('#tk-schedule-stat-fail').textContent = fail;
+    $('#tk-schedule-stat-pending').textContent = pending;
+    var pct = total > 0 ? Math.round(((success+fail)/total)*100) : 0;
+    $('#tk-schedule-progress-bar').style.width = pct + '%';
+  }
+
+  function updateScheduleControlButtons() {
+    var btnStart = $('#tk-btn-start-schedule');
+    var btnPause = $('#tk-btn-pause-schedule');
+    var btnRetry = $('#tk-btn-retry-schedule');
+    if (isRunning && !isPaused) {
+      btnStart.disabled=true;btnStart.textContent='▶ 执行中...';btnPause.disabled=false;btnPause.textContent='⏸ 暂停';btnRetry.disabled=true;
+    } else if (isRunning && isPaused) {
+      btnStart.disabled=true;btnStart.textContent='▶ 执行中...';btnPause.disabled=false;btnPause.textContent='▶ 继续';btnRetry.disabled=true;
+    } else {
+      var hasPending = scheduleTaskList.some(function(t){return t.status===SCHEDULE_STATUS.PENDING;});
+      var hasFailed = scheduleTaskList.some(function(t){return t.status===SCHEDULE_STATUS.FAIL;});
+      btnStart.disabled=!hasPending;btnStart.textContent='▶ 开始排课';btnPause.disabled=true;btnPause.textContent='⏸ 暂停';btnRetry.disabled=!hasFailed;
+    }
+  }
+
+  function showScheduleFeedback(msg, type) {
+    var el = $('#tk-schedule-feedback');
+    el.textContent = msg; el.className = 'tk-parse-feedback tk-feedback-' + type; el.classList.remove('tk-hidden');
+  }
+  function hideScheduleFeedback() { $('#tk-schedule-feedback').classList.add('tk-hidden'); }
+
+  function addScheduleLog(text, type) {
+    var entry = document.createElement('div');
+    entry.className = 'tk-log-entry';
+    entry.innerHTML = '<span class="tk-log-time">' + getNowTimeStr() + '</span><span class="tk-log-' + (type||'info') + '">' + text + '</span>';
+    var container = $('#tk-schedule-log-container');
+    container.appendChild(entry); container.scrollTop = container.scrollHeight;
+  }
+
+  async function executeScheduleTask(task) {
+    try {
+      // Step1: 获取课程列表
+      var courseResp = await apiRequest(API_BASE + '/ai/user/course/list?userId=' + task.userId + '&courseClassify=3');
+      var courses = (courseResp.data && courseResp.data.courseList) || [];
+      var target = null;
+      var kw = task.courseKeyword.trim();
+      for (var kwLen = kw.length; kwLen >= 2 && !target; kwLen--) {
+        var subKw = kw.substring(0, kwLen);
+        target = courses.find(function(c) { return c.bookStatus === 0 && c.title.indexOf(subKw) !== -1; });
+      }
+      if (!target) {
+        var available = courses.filter(function(c){return c.bookStatus===0;}).map(function(c){return c.title;});
+        return { success:false, error:'未找到匹配课程"' + task.courseKeyword + '"（可选：' + (available.join('、')||'无未排课程') + '）' };
+      }
+      // Step2: 提交排课
+      var times = calculateTimeRange(task.newDate, task.newTime);
+      var body = {
+        userId: String(task.userId),
+        courseId: String(target.id),
+        aiCourseId: String(target.aiCourseId),
+        classHourCycles: [{ classTimeStart: times.classTimeStart, classTimeEnd: times.classTimeEnd, classHourOrder: 1, weeks: task.weeks }]
+      };
+      var result = await apiRequest(API_BASE + '/ai/user/classtime/book/cycle', { method: 'POST', body: JSON.stringify(body) });
+      if (result.code === '000000') {
+        return { success:true, message:'排课成功', detail:{ courseName:target.title, weeks:task.weeksDisplay } };
+      }
+      throw new Error(result.mesg || '排课提交失败');
+    } catch (e) { return { success:false, error:e.message||'未知错误' }; }
+  }
+
+  async function executeScheduleTasks() {
+    if (isRunning) return;
+    var pending = scheduleTaskList.filter(function(t){return t.status===SCHEDULE_STATUS.PENDING;});
+    if (pending.length===0) return;
+    isRunning=true;isPaused=false;updateScheduleControlButtons();
+    var CONCURRENCY=3; var BATCH_DELAY=300;
+    for (var i=0;i<pending.length;i+=CONCURRENCY) {
+      var batch = pending.slice(i,i+CONCURRENCY);
+      await Promise.all(batch.map(async function(task,bi) {
+        if (bi>0) await sleep(500);
+        task.status=SCHEDULE_STATUS.RUNNING; updateScheduleRowStatus(task.index); updateScheduleStats();
+        var result = await executeScheduleTask(task);
+        if (result.success) { task.status=SCHEDULE_STATUS.SUCCESS; task.detail=result.detail; addScheduleLog('✅ #'+task.index+' '+task.userId+' '+result.detail.courseName+' '+task.newDate+' '+task.newTime+' 每周'+result.detail.weeks,'success'); }
+        else { task.status=SCHEDULE_STATUS.FAIL; task.error=result.error; addScheduleLog('❌ #'+task.index+' '+task.userId+' '+result.error,'fail'); }
+        updateScheduleRowStatus(task.index); updateScheduleStats();
+      }));
+      if (isPaused) { while(isPaused&&isRunning) await sleep(500); }
+      if (!isRunning) break;
+      if (i+CONCURRENCY<pending.length) await sleep(BATCH_DELAY);
+    }
+    isRunning=false;isPaused=false;updateScheduleControlButtons();
+    updateScheduleStats();
+    var s=scheduleTaskList.filter(function(t){return t.status===SCHEDULE_STATUS.SUCCESS;}).length;
+    var f=scheduleTaskList.filter(function(t){return t.status===SCHEDULE_STATUS.FAIL;}).length;
+    addScheduleLog('排课完成：成功'+s+'条，失败'+f+'条','info');
+  }
+
+  function retryScheduleFailed() {
+    scheduleTaskList.filter(function(t){return t.status===SCHEDULE_STATUS.FAIL;}).forEach(function(t){t.status=SCHEDULE_STATUS.PENDING;t.error='';});
+    renderSchedulePreviewTable(); updateScheduleStats(); updateScheduleControlButtons();
+  }
+
+  function sleep(ms) { return new Promise(function(r){setTimeout(r,ms);}); }
 })();

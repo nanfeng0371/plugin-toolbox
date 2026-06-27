@@ -23,3 +23,6 @@ deploy-log.txt
 .check-server-update.json
 .mcp-final-check.json
 .mcp-server-update.json
+
+# 部署配置（含敏感 Token，绝对不能推送！）
+deploy-config.js

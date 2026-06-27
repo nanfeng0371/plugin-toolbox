@@ -93,4 +93,25 @@ self.__registerModuleHandlers('tiaoke', {
       return { roster: [], skipped: 0, error: 'Excel解析失败: ' + e.message };
     }
   },
+
+  /**
+   * 🆕 生成排课模板 Excel (.xlsx)
+   */
+  GENERATE_XLSX: function (data, sender) {
+    try {
+      if (typeof XLSX === 'undefined') return { xlsxBase64: '', error: 'xlsx 库未加载' };
+      var headers = ['学员ID', '首课日期', '上课时间', '课程名', '星期'];
+      var sample = ['1425217(示例)', '2026-07-10', '14:00', '暑假课', '1234567'];
+      var rows = [headers, sample];
+      for (var r = 0; r < 10; r++) rows.push(['', '', '', '', '']);
+      var ws = XLSX.utils.aoa_to_sheet(rows);
+      ws['!cols'] = [{wch:12}, {wch:14}, {wch:8}, {wch:30}, {wch:12}];
+      var wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, '排课模板');
+      var wbout = XLSX.write(wb, { type: 'base64', bookType: 'xlsx' });
+      return { xlsxBase64: wbout };
+    } catch (e) {
+      return { xlsxBase64: '', error: '生成失败: ' + e.message };
+    }
+  },
 });
