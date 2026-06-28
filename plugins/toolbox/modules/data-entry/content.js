@@ -1,5 +1,5 @@
 /**
- * 批量录入成绩 v1.0.2 — Toolbox 模块化版本（content.js）
+ * 批量录入成绩 v1.1.0 — Toolbox 模块化版本（content.js）
  *
  * UI 对标调课助手排课 Tab 设计语言：
  * - 下载模板 + 提示文字 + 大文本框 + 格式说明 + 蓝色大解析按钮
@@ -186,11 +186,23 @@
 
     entryList = parsed.valid;
 
-    var msg = '解析完成：' + parsed.valid.length + ' 条有效';
-    if (parsed.skipped > 0) msg += '，已跳过 ' + parsed.skipped + ' 行（格式错误或缺少必填项）';
-    if (parsed.errors.length > 0) {
-      msg += '\n校验警告：\n' + parsed.errors.slice(0, 3).join('\n');
-      if (parsed.errors.length > 3) msg += '\n...等 ' + parsed.errors.length + ' 处';
+    var invalidCount = entryList.filter(function(e) { return e.status === STATUS.FAIL; }).length;
+    var validCount = entryList.length - invalidCount;
+
+    var msg = '解析完成：共 ' + entryList.length + ' 条';
+    if (parsed.skipped > 0) msg += '，已跳过 ' + parsed.skipped + ' 行';
+    if (invalidCount > 0) msg += '，❌ ' + invalidCount + ' 条格式错误';
+
+    if (parsed.errors.length > 0 || invalidCount > 0) {
+      var allErrs = parsed.errors.slice();
+      // 加入格式错误行
+      for (var ei = 0; ei < entryList.length; ei++) {
+        if (entryList[ei].status === STATUS.FAIL && entryList[ei].errorMsg) {
+          allErrs.push('第' + (ei + 1) + '行 ' + entryList[ei].errorMsg);
+        }
+      }
+      msg += '\n' + allErrs.slice(0, 4).join('\n');
+      if (allErrs.length > 4) msg += '\n...等 ' + allErrs.length + ' 处错误';
       showFeedback(msg, true);
     } else {
       showFeedback(msg, false);
@@ -202,7 +214,14 @@
 
     // 更新底部计数
     var hintEl = $('#de-empty-hint');
-    if (hintEl) hintEl.innerHTML = '待录入条数: <b>' + entryList.length + '</b>';
+    if (hintEl) hintEl.innerHTML = '待录入条数: <b>' + validCount + '</b>' + (invalidCount > 0 ? '（' + invalidCount + '条格式错误）' : '');
+
+    // 有格式错误时禁用执行按钮
+    var btnExec = $('#de-btn-exec');
+    if (btnExec) {
+      btnExec.disabled = invalidCount > 0;
+      btnExec.textContent = invalidCount > 0 ? '▶ 有格式错误，请修正后重试' : '▶ 开始录入';
+    }
 
     // 重置进度条
     updateProgress(0);
@@ -248,16 +267,31 @@
 
       // 白名单校验
       var rowErrors = [];
-      if (EXAM_TYPES.indexOf(examType) === -1) rowErrors.push('第' + (i + 1) + '行考试类型"' + examType + '"不合法');
-      if (SUBJECTS.indexOf(subject) === -1) rowErrors.push('第' + (i + 1) + '行学科"' + subject + '"不合法');
-      if (SCORE_FORMS.indexOf(scoreForm) === -1) rowErrors.push('第' + (i + 1) + '行成绩形式"' + scoreForm + '"不合法');
+      if (!/^\d{5,}$/.test(studentId)) rowErrors.push('ID格式错误（需5位以上数字）');
+      if (EXAM_TYPES.indexOf(examType) === -1) rowErrors.push('考试类型"' + examType + '"不在范围内（可选：' + EXAM_TYPES.join('/') + '）');
+      if (SUBJECTS.indexOf(subject) === -1) rowErrors.push('学科"' + subject + '"不在范围内（可选：' + SUBJECTS.join('/') + '）');
+      if (SCORE_FORMS.indexOf(scoreForm) === -1) rowErrors.push('成绩形式"' + scoreForm + '"不在范围内（可选：' + SCORE_FORMS.join('/') + '）');
+      if (!scoreContent) rowErrors.push('成绩内容不能为空');
 
-      if (rowErrors.length > 0) {
-        errors = errors.concat(rowErrors);
-        // 仍然加入列表，标记为错误
+      // 成绩内容格式匹配校验
+      if (scoreContent && rowErrors.length === 0) {
+        if (scoreForm === '分数') {
+          // 分数：应包含数字，如 "85/100"、"92"、"150分"
+          if (!/\d/.test(scoreContent)) {
+            rowErrors.push('成绩内容"' + scoreContent + '"不像分数（应包含数字）');
+          }
+        } else if (scoreForm === '等级') {
+          // 等级：通常 A/B/C/D 或 优/良/中/差
+          if (/[0-9]{2,}/.test(scoreContent) && !/[ABCDF甲乙丙丁优良中差]/.test(scoreContent)) {
+            rowErrors.push('成绩内容"' + scoreContent + '"不像等级（应包含字母或中文等级）');
+          }
+        } else if (scoreForm === '排名') {
+          // 排名：应纯数字
+          if (!/^\d+$/.test(scoreContent)) {
+            rowErrors.push('排名"' + scoreContent + '"应为纯数字');
+          }
+        }
       }
-
-      if (!scoreContent) { skipped++; continue; }
 
       valid.push({
         id: '',
@@ -353,6 +387,12 @@
   async function startExecution() {
     if (isRunning) return;
     if (entryList.length === 0) return;
+
+    var invalidCount = entryList.filter(function(e) { return e.status === STATUS.FAIL; }).length;
+    if (invalidCount > 0) {
+      alert('有 ' + invalidCount + ' 条数据格式错误，请修正后重新解析');
+      return;
+    }
 
     var validItems = [];
     for (var i = 0; i < entryList.length; i++) {

@@ -133,6 +133,9 @@
 .tk-status-success { color: #27ae60; font-weight: 600; }
 .tk-status-fail { color: #e74c3c; font-weight: 600; }
 
+/* 校验错误行 */
+.tk-row-err td { background: #fff5f5 !important; }
+
 /* 控制区 */
 .tk-control-section { margin-bottom: 12px; }
 .tk-control-buttons { display: flex; gap: 8px; }

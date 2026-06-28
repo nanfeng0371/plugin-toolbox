@@ -1,5 +1,5 @@
 /**
- * 调课助手 v4.2.1 — Toolbox 模块化版本（content.js）
+ * 调课助手 v4.3.0 — Toolbox 模块化版本（content.js）
  * 合并自 popup.js（UI逻辑）+ content/content.js（API调用）
  * 改动：popup→Shadow DOM 模块；API调用直接在 content script 执行；xlsx 解析委托 background
  * v4.1.0: 三段式课程匹配 — 支持输入课程名关键词，多结果时自动报错
@@ -17,6 +17,7 @@
   STATUS_LABELS[TASK_STATUS.RUNNING] = '🔄执行中';
   STATUS_LABELS[TASK_STATUS.SUCCESS] = '✅成功';
   STATUS_LABELS[TASK_STATUS.FAIL] = '❌失败';
+  var VAL_INVALID_LABEL = '❌格式错误';
   let STATUS_CSS = {};
   STATUS_CSS[TASK_STATUS.PENDING] = 'tk-status-pending';
   STATUS_CSS[TASK_STATUS.RUNNING] = 'tk-status-running';
@@ -817,7 +818,79 @@
       if (!task) { addLog('第' + (i + 1) + '行无法解析: ' + line.substring(0, 60), 'warn'); continue; }
       tasks.push({ index: tasks.length + 1, userId: task.userId, periodSort: task.periodSort, newDate: task.newDate, newTime: task.newTime, matchedName: task.matchedName || '', courseKeyword: task.courseKeyword || '', status: TASK_STATUS.PENDING, error: '', detail: null });
     }
+    // 本地格式校验
+    tasks.forEach(validateRescheduleRow);
     return tasks;
+  }
+
+  /**
+   * 调课数据本地格式校验
+   * 校验失败的项标记 _invalid=true，禁止提交
+   */
+  function validateRescheduleRow(task) {
+    var errors = [];
+    if (!task.userId || !/^\d{5,}$/.test(String(task.userId))) {
+      errors.push('ID格式错误（需5位以上数字）');
+    }
+    if (task.periodSort === null || task.periodSort === undefined || !Number(task.periodSort)) {
+      errors.push('讲次无效');
+    }
+    if (!task.newDate) {
+      errors.push('日期为空或格式错误');
+    }
+    if (!task.newTime) {
+      errors.push('时间为空');
+    } else {
+      var hm = String(task.newTime).match(/^(\d{1,2}):(\d{2})/);
+      if (!hm) {
+        errors.push('时间格式错误（如 14:00）');
+      } else {
+        var h = parseInt(hm[1], 10);
+        if (h < 6 || h >= 23) errors.push('时间不合理（' + h + '点，应在6:00-22:59）');
+      }
+    }
+    if (errors.length > 0) {
+      task._invalid = true;
+      task._invalidMsg = errors.join('；');
+      task.status = TASK_STATUS.FAIL;
+      task.error = errors.join('；');
+    }
+  }
+
+  /**
+   * 排课数据本地格式校验
+   */
+  function validateScheduleRow(task) {
+    var errors = [];
+    if (!task.userId || !/^\d{5,}$/.test(String(task.userId))) {
+      errors.push('ID格式错误（需5位以上数字）');
+    }
+    if (!task.newDate) {
+      errors.push('日期为空或格式错误（支持 2026/7/10 或 7/10）');
+    }
+    if (!task.newTime) {
+      errors.push('时间为空');
+    } else {
+      var hm = String(task.newTime).match(/^(\d{1,2}):(\d{2})/);
+      if (!hm) {
+        errors.push('时间格式错误（如 14:00）');
+      } else {
+        var h = parseInt(hm[1], 10);
+        if (h < 6 || h >= 23) errors.push('时间不合理（' + h + '点，应在6:00-22:59）');
+      }
+    }
+    if (!task.courseKeyword) {
+      errors.push('课程名不能为空');
+    }
+    if (!task.weeks || !task.weeks.length) {
+      errors.push('星期为空或格式错误（如 123567 或 一二三四五六）');
+    }
+    if (errors.length > 0) {
+      task._invalid = true;
+      task._invalidMsg = errors.join('；');
+      task.status = SCHEDULE_STATUS.FAIL;
+      task.error = errors.join('；');
+    }
   }
 
   function parseOneLine(line, lineIdx) {
@@ -964,8 +1037,15 @@
       addLog('未解析到有效数据', 'fail');
       return;
     }
-    showParseFeedback('成功解析 ' + taskList.length + ' 条调课数据', 'success');
-    addLog('成功解析 ' + taskList.length + ' 条调课数据', 'success');
+    var invalidCount = taskList.filter(function(t){return t._invalid;}).length;
+    var validCount = taskList.length - invalidCount;
+    if (invalidCount > 0) {
+      showParseFeedback('解析 ' + taskList.length + ' 条，❌ ' + invalidCount + ' 条格式错误需修正', 'error');
+      addLog('解析 ' + taskList.length + ' 条，其中 ' + invalidCount + ' 条格式错误（见状态列）', 'warn');
+    } else {
+      showParseFeedback('成功解析 ' + taskList.length + ' 条调课数据，全部通过校验', 'success');
+      addLog('成功解析 ' + taskList.length + ' 条调课数据', 'success');
+    }
     renderPreviewTable();
     updateStats();
     $('#tk-preview-section').classList.remove('tk-hidden');
@@ -984,15 +1064,19 @@
     taskList.forEach(function (task) {
       let tr = document.createElement('tr');
       tr.id = 'tk-task-row-' + task.index;
+      if (task._invalid) tr.className = 'tk-row-err';
       let displayId = task.matchedName ? task.userId + ' (' + task.matchedName + ')' : task.userId;
       let periodDisplay = task.courseKeyword ? task.periodSort + ' (' + task.courseKeyword + ')' : task.periodSort;
+      var statusCell = task._invalid
+        ? '<td class="tk-status-fail" title="' + (task._invalidMsg || '') + '">' + VAL_INVALID_LABEL + '<br><span style="font-size:10px;color:#e74c3c;">' + (task._invalidMsg || '') + '</span></td>'
+        : '<td class="' + (STATUS_CSS[task.status] || '') + '">' + (STATUS_LABELS[task.status] || '') + '</td>';
       tr.innerHTML =
         '<td>' + task.index + '</td>' +
         '<td>' + displayId + '</td>' +
         '<td>' + periodDisplay + '</td>' +
         '<td>' + task.newDate + '</td>' +
         '<td>' + task.newTime + '</td>' +
-        '<td class="' + (STATUS_CSS[task.status] || '') + '">' + (STATUS_LABELS[task.status] || '') + '</td>';
+        statusCell;
       tbody.appendChild(tr);
     });
   }
@@ -1035,9 +1119,11 @@
     } else {
       let hasPending = taskList.some(function (t) { return t.status === TASK_STATUS.PENDING; });
       let hasFailed = taskList.some(function (t) { return t.status === TASK_STATUS.FAIL; });
-      btnStart.disabled = !hasPending; btnStart.textContent = '▶ 开始执行';
+      let hasInvalid = taskList.some(function (t) { return t._invalid; });
+      btnStart.disabled = !hasPending || hasInvalid;
+      btnStart.textContent = hasInvalid ? '▶ 有格式错误，请修正后重试' : (hasPending ? '▶ 开始执行' : '▶ 无待执行任务');
       btnPause.disabled = true; btnPause.textContent = '⏸ 暂停';
-      btnRetry.disabled = !hasFailed;
+      btnRetry.disabled = !hasFailed || hasInvalid;
     }
   }
 
@@ -1304,7 +1390,7 @@
 
   async function retryFailed() {
     taskList.forEach(function (task) {
-      if (task.status === TASK_STATUS.FAIL) { task.status = TASK_STATUS.PENDING; task.error = ''; updateRowStatus(task.index); }
+      if (task.status === TASK_STATUS.FAIL && !task._invalid) { task.status = TASK_STATUS.PENDING; task.error = ''; updateRowStatus(task.index); }
     });
     updateStats();
     addLog('开始重试失败项...', 'warn');
@@ -1507,6 +1593,8 @@
       }
       tasks.push({ index:tasks.length+1, userId:userId, courseKeyword:courseKeyword, newDate:normalizeDate(dateStr), newTime:normalizeTime(timeStr), weeks:weeks, weeksDisplay:weeksToDisplay(weeks), status:SCHEDULE_STATUS.PENDING, error:'', detail:null });
     }
+    // 本地格式校验
+    tasks.forEach(function(t) { if (t.status === SCHEDULE_STATUS.PENDING) validateScheduleRow(t); });
     return tasks;
   }
 
@@ -1523,10 +1611,16 @@
       addScheduleLog('未解析到有效数据','fail');
       return;
     }
-    var valid = scheduleTaskList.filter(function(t){return t.status===SCHEDULE_STATUS.PENDING;}).length;
+    var invalidCount = scheduleTaskList.filter(function(t){return t._invalid;}).length;
+    var valid = scheduleTaskList.filter(function(t){return t.status===SCHEDULE_STATUS.PENDING && !t._invalid;}).length;
     var failed = scheduleTaskList.length - valid;
-    showScheduleFeedback('解析 ' + scheduleTaskList.length + ' 条（'+valid+'条可排'+(failed>0?'，'+failed+'条失败':'')+'）', failed>0?'warn':'success');
-    addScheduleLog('解析 ' + scheduleTaskList.length + ' 条排课数据', 'success');
+    if (invalidCount > 0) {
+      showScheduleFeedback('解析 ' + scheduleTaskList.length + ' 条，❌ ' + invalidCount + ' 条格式错误需修正', 'error');
+      addScheduleLog('解析 ' + scheduleTaskList.length + ' 条，其中 ' + invalidCount + ' 条格式错误（见状态列）', 'warn');
+    } else {
+      showScheduleFeedback('解析 ' + scheduleTaskList.length + ' 条（'+valid+'条可排'+(failed>0?'，'+failed+'条失败':'')+'）', failed>0?'warn':'success');
+    }
+    addScheduleLog('解析 ' + scheduleTaskList.length + ' 条排课数据', invalidCount>0?'warn':'success');
     renderSchedulePreviewTable();
     updateScheduleStats();
     $('#tk-schedule-preview-section').classList.remove('tk-hidden');
@@ -1541,7 +1635,11 @@
     scheduleTaskList.forEach(function(task) {
       var tr = document.createElement('tr');
       tr.id = 'tk-schedule-row-' + task.index;
-      tr.innerHTML = '<td>' + task.index + '</td><td>' + task.userId + '</td><td>' + (task.courseKeyword||'') + '</td><td>' + (task.newDate||'') + '</td><td>' + (task.newTime||'') + '</td><td>' + task.weeksDisplay + '</td><td class="'+(SCHEDULE_STATUS_CSS[task.status]||'')+'">'+(SCHEDULE_STATUS_LABELS[task.status]||'')+'</td>';
+      if (task._invalid) tr.className = 'tk-row-err';
+      var statusCell = task._invalid
+        ? '<td class="tk-status-fail" title="' + (task._invalidMsg||'') + '">' + VAL_INVALID_LABEL + '<br><span style="font-size:10px;color:#e74c3c;">' + (task._invalidMsg||'') + '</span></td>'
+        : '<td class="'+(SCHEDULE_STATUS_CSS[task.status]||'')+'">'+(SCHEDULE_STATUS_LABELS[task.status]||'')+'</td>';
+      tr.innerHTML = '<td>' + task.index + '</td><td>' + task.userId + '</td><td>' + (task.courseKeyword||'') + '</td><td>' + (task.newDate||'') + '</td><td>' + (task.newTime||'') + '</td><td>' + task.weeksDisplay + '</td>' + statusCell;
       tbody.appendChild(tr);
     });
   }
@@ -1580,7 +1678,11 @@
     } else {
       var hasPending = scheduleTaskList.some(function(t){return t.status===SCHEDULE_STATUS.PENDING;});
       var hasFailed = scheduleTaskList.some(function(t){return t.status===SCHEDULE_STATUS.FAIL;});
-      btnStart.disabled=!hasPending;btnStart.textContent='▶ 开始排课';btnPause.disabled=true;btnPause.textContent='⏸ 暂停';btnRetry.disabled=!hasFailed;
+      var hasInvalid = scheduleTaskList.some(function(t){return t._invalid;});
+      btnStart.disabled=!hasPending||hasInvalid;
+      btnStart.textContent=hasInvalid?'▶ 有格式错误，请修正后重试':(hasPending?'▶ 开始排课':'▶ 无待执行任务');
+      btnPause.disabled=true;btnPause.textContent='⏸ 暂停';
+      btnRetry.disabled=!hasFailed||hasInvalid;
     }
   }
 
@@ -1657,7 +1759,7 @@
   }
 
   function retryScheduleFailed() {
-    scheduleTaskList.filter(function(t){return t.status===SCHEDULE_STATUS.FAIL;}).forEach(function(t){t.status=SCHEDULE_STATUS.PENDING;t.error='';});
+    scheduleTaskList.filter(function(t){return t.status===SCHEDULE_STATUS.FAIL && !t._invalid;}).forEach(function(t){t.status=SCHEDULE_STATUS.PENDING;t.error='';});
     renderSchedulePreviewTable(); updateScheduleStats(); updateScheduleControlButtons();
   }
 
