@@ -2,9 +2,9 @@
 <gupdate xmlns="http://www.google.com/update2/response" protocol="2.0">
   <app appid="nmpdifejooglhkcilhgjkhggbioalojk">
     <updatecheck
-      codebase="https://renewal-calendar-7ff2rtj4f876144-1259283480.tcloudbaseapp.com/extensions/toolbox/toolbox-v2.2.112.crx"
-      version="2.2.112"
-      hash_sha256="3a2a3684cda09892930547781ea621f61fbfc86086443d1f2b6cc764446844c0"
+      codebase="https://renewal-calendar-7ff2rtj4f876144-1259283480.tcloudbaseapp.com/extensions/toolbox/toolbox-v2.2.113.crx"
+      version="2.2.113"
+      hash_sha256="e1296e629c1719875e3d340371865442ddbe4c008cafe1dc8fbc9336940a7b11"
       status="ok" />
   </app>
 </gupdate>
