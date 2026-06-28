@@ -32,7 +32,7 @@
   // ========== 已知模块列表 ==========
 
   /** 壳内硬编码的已知模块目录名，用于扫描 module.json */
-  const KNOWN_MODULES = ['report', 'dingtalk', 'tiaoke', 'updater', 'heatmap', 'dailyboard'];
+  const KNOWN_MODULES = ['report', 'dingtalk', 'tiaoke', 'updater', 'heatmap', 'dailyboard', 'data-entry'];
 
   /**
    * 已知模块 background.js 路径映射
@@ -46,6 +46,7 @@
     updater: 'modules/updater/background.js',
     heatmap: 'modules/heatmap/background.js',
     dailyboard: 'modules/dailyboard/background.js',
+    'data-entry': 'modules/data-entry/background.js',
   };
 
   // ========== ModuleRegistry ==========

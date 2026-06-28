@@ -1,7 +1,7 @@
 {
   "name": "report",
   "label": "学习报告分析",
-  "description": "批量获取学习报告数据，进行四维评价分析和导出",
+  "description": "批量获取报告，四维评价分析导出",
   "version": "5.2.0",
   "entry": {
     "background": "background.js",

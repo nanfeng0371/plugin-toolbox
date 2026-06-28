@@ -25,11 +25,11 @@
     position: 'left',  // A优化：改为左侧
     animDuration: 250,
     /** 已知模块目录名（用于 fetch module.json，无需硬编码元数据） */
-    knownModules: ['report', 'dingtalk', 'tiaoke', 'updater', 'heatmap', 'dailyboard'],
+    knownModules: ['report', 'dingtalk', 'tiaoke', 'updater', 'heatmap', 'dailyboard', 'data-entry'],
   };
 
   // ========== 模块图标映射（统一定义）==========
-  const ICON_MAP = { dashboard: '🏠', debug: '🔧', report: '📊', dingtalk: '🔗', tiaoke: '📚', updater: '🔄', heatmap: '🗓️', dailyboard: '📋' };
+  const ICON_MAP = { dashboard: '🏠', debug: '🔧', report: '📊', dingtalk: '🔗', tiaoke: '📚', updater: '🔄', heatmap: '🗓️', dailyboard: '📋', 'data-entry': '📝' };
 
   // ========== Storage Key 常量 ==========
   const STORAGE_KEYS = {
@@ -320,7 +320,7 @@
       </div>
     `;
 
-    // 调试 Tab（C优化）
+    // 调试 Tab
     html += `
       <div class="tb-tab" data-tab="debug" title="调试">
         <span class="tb-tab-icon">${ICON_MAP.debug}</span>
@@ -328,25 +328,7 @@
       </div>
     `;
 
-    // 模块 Tab
-    for (const mod of moduleList) {
-      if (!mod.enabled) continue;
-      const icon = ICON_MAP[mod.name] || '📦';
-      html += `
-        <div class="tb-tab" data-tab="${mod.name}" title="${mod.label || mod.name}">
-          <span class="tb-tab-icon">${icon}</span>
-          <span class="tb-tab-text">${mod.label || mod.name}</span>
-        </div>
-      `;
-    }
-
-    // 更多 ▼ 按钮（初始隐藏）
-    html += `
-      <div class="tb-nav-more" title="更多">
-        <span>更多</span>
-        <span class="tb-nav-more-arrow">▼</span>
-      </div>
-    `;
+    // 🆕 不再预生成模块Tab，改为动态追加（切换模块时才出现）
 
     // 滚动提示遮罩
     html += `
@@ -483,6 +465,33 @@
 
   function switchTab(tabName) {
     if (!sidebarEl) return;
+
+    // 🆕 切换到模块时，动态追加模块Tab（如果还没追加）
+    if (tabName !== 'dashboard' && tabName !== 'debug') {
+      var existingModTab = sidebarEl.querySelector('.tb-tab[data-tab="' + tabName + '"]');
+      if (!existingModTab) {
+        var modMeta = moduleList.find(function(m) { return m.name === tabName; });
+        var modLabel = modMeta ? (modMeta.label || modMeta.name) : tabName;
+        var modIcon = ICON_MAP[tabName] || '📦';
+        var modTabEl = document.createElement('div');
+        modTabEl.className = 'tb-tab';
+        modTabEl.dataset.tab = tabName;
+        modTabEl.title = modLabel;
+        modTabEl.innerHTML = '<span class="tb-tab-icon">' + modIcon + '</span><span class="tb-tab-text">' + modLabel + '</span>';
+        modTabEl.addEventListener('click', function() { switchTab(tabName); });
+        // 插入到调试Tab后面
+        var debugTab = sidebarEl.querySelector('.tb-tab[data-tab="debug"]');
+        if (debugTab) debugTab.after(modTabEl);
+      }
+    }
+
+    // 🆕 切换到首页/调试时，移除模块Tab
+    if (tabName === 'dashboard' || tabName === 'debug') {
+      var allModTabs = sidebarEl.querySelectorAll(
+        '.tb-tab[data-tab]:not([data-tab="dashboard"]):not([data-tab="debug"])'
+      );
+      allModTabs.forEach(function(t) { t.remove(); });
+    }
 
     // 更新 Tab 高亮
     sidebarEl.querySelectorAll('.tb-tab').forEach((t) => {
@@ -960,8 +969,7 @@
 
     // 先显示加载占位
     shadowRoot.innerHTML = `
-      <div style="padding:32px;text-align:center;color:#94a3b8;">
-        <div class="tb-spinner" style="margin:0 auto 12px;"></div>
+      <div id="tb-module-loading" style="padding:12px 0;text-align:center;color:#94a3b8;font-size:12px;">
         正在加载「${getModuleLabel(moduleName)}」...
       </div>
     `;
@@ -1004,6 +1012,10 @@
         await import(jsUrl);
         console.log(`[壳Content] 模块 ${moduleName} content.js 加载成功`);
       }
+
+      // 清除加载占位（模块 content.js 已自行渲染 UI）
+      var loadingEl = shadowRoot.querySelector('#tb-module-loading');
+      if (loadingEl) loadingEl.remove();
 
       // 标记为已加载
       loadedModules.set(moduleName, true);
@@ -1074,7 +1086,6 @@
             <div class="tb-module-card-name">${mod.label || mod.name}</div>
             <div class="tb-module-card-desc">${mod.description}</div>
           </div>
-          <span class="tb-module-badge tb-module-badge-ready">点击使用</span>
         </div>
       `;
       })

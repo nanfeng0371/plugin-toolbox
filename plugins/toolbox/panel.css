@@ -343,15 +343,15 @@
 /* ========== 模块卡片网格 ========== */
 .tb-module-grid {
   display: grid;
-  grid-template-columns: 1fr;
+  grid-template-columns: 1fr 1fr;
   gap: 8px;
 }
 
 .tb-module-card {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 14px;
+  gap: 8px;
+  padding: 12px 10px;
   background: #fff;
   border: 1px solid var(--tb-border);
   border-radius: var(--tb-radius);
@@ -378,13 +378,13 @@
 }
 
 .tb-module-card-icon {
-  width: 44px;
-  height: 44px;
+  width: 38px;
+  height: 38px;
   border-radius: var(--tb-radius-sm);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 22px;
+  font-size: 20px;
   flex-shrink: 0;
 }
 
@@ -394,7 +394,7 @@
 }
 
 .tb-module-card-name {
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 600;
   color: var(--tb-text);
   margin-bottom: 3px;

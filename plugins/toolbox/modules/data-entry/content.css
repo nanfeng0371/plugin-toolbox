@@ -1,0 +1,203 @@
+/* ============================================
+   批量录入模块样式 v1.0.2 — de- 前缀
+   对标调课助手设计语言
+   ============================================ */
+
+.de-module-root {
+  padding: 12px 14px;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-size: 13px;
+  color: #333;
+  line-height: 1.5;
+  box-sizing: border-box;
+}
+
+/* 区段容器 */
+.de-section {
+  margin-bottom: 12px;
+}
+
+/* 区段标题 */
+.de-section-label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 8px;
+}
+
+/* 提示文字 */
+.de-input-hint {
+  font-size: 11px;
+  color: #888;
+  margin-top: 4px;
+  margin-bottom: 8px;
+}
+
+/* 隐藏工具类 */
+.de-hidden { display: none !important; }
+
+/* ======= 大文本框 ======= */
+.de-textarea {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 12px;
+  font-family: 'Consolas', 'Monaco', monospace;
+  resize: vertical;
+  transition: border-color 0.2s;
+  box-sizing: border-box;
+  background: #fff;
+  color: #333;
+  line-height: 1.6;
+}
+.de-textarea:focus {
+  outline: none;
+  border-color: #4a90d9;
+  box-shadow: 0 0 0 2px rgba(74, 144, 217, 0.15);
+}
+.de-textarea::placeholder {
+  color: #aaa;
+  font-size: 11px;
+  line-height: 1.7;
+}
+
+/* ======= 解析反馈 ======= */
+.de-parse-feedback {
+  padding: 6px 10px;
+  border-radius: 4px;
+  margin-bottom: 8px;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.5;
+  white-space: pre-wrap;
+}
+.de-feedback-ok { background: #eef4fb; color: #2980b9; border: 1px solid #b8daff; }
+.de-feedback-err { background: #fff3f3; color: #c0392b; border: 1px solid #f5c6cb; }
+
+/* ======= 按钮 ======= */
+.de-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 7px 16px;
+  border: none;
+  border-radius: 5px;
+  font-size: 13px;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+.de-btn:active { transform: scale(0.97); }
+.de-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+.de-btn-primary { background: #4a90d9; color: #fff; width: 100%; }
+.de-btn-primary:hover:not(:disabled) { background: #3a7bc8; }
+
+.de-btn-success { background: #27ae60; color: #fff; }
+.de-btn-success:hover:not(:disabled) { background: #219a52; }
+
+.de-btn-secondary { background: #f0f4f8; color: #4a90d9; border: 1px solid #d1d5db; }
+.de-btn-secondary:hover:not(:disabled) { background: #eef4fb; }
+
+.de-btn-outline { background: #fff; color: #4a90d9; border: 1px solid #4a90d9; padding: 4px 10px; font-size: 11px; }
+.de-btn-outline:hover:not(:disabled) { background: #eef4fb; }
+
+.de-btn-block { width: 100%; }
+
+/* ======= 预览表格 ======= */
+.de-preview-section { margin-bottom: 12px; }
+
+.de-table-wrap {
+  max-height: 220px;
+  overflow-y: auto;
+  overflow-x: auto;
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  background: #fff;
+}
+
+.de-empty-hint {
+  text-align: center;
+  font-size: 12px;
+  color: #999;
+  margin-top: 6px;
+}
+.de-empty-hint b { color: #666; font-weight: 600; }
+
+.de-table {
+  width: 100%;
+  min-width: 560px;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.de-table th {
+  background: #f8f9fa;
+  color: #495057;
+  font-weight: 600;
+  padding: 7px 10px;
+  text-align: left;
+  border-bottom: 2px solid #dee2e6;
+  white-space: nowrap;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.de-table td {
+  padding: 6px 10px;
+  border-bottom: 1px solid #f0f0f0;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+.de-table tbody tr:hover { background: #f8f9ff; }
+
+.de-row-err td { background: #fff5f5 !important; }
+
+/* 加载中的姓名 */
+.de-name-loading { color: #bbb; font-size: 11px; }
+
+/* ======= 状态文字 ======= */
+.de-status-success { color: #27ae60; font-weight: 600; }
+.de-status-fail { color: #e74c3c; font-weight: 600; }
+.de-status-pending { color: #95a5a6; }
+.de-status-running { color: #3498db; }
+
+/* ======= 执行操作区 ======= */
+.de-action-section { margin-bottom: 12px; }
+
+.de-progress-bar-wrapper {
+  height: 8px;
+  background: #e9ecef;
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 8px;
+}
+
+.de-progress-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #4a90d9, #27ae60);
+  border-radius: 4px;
+  transition: width 0.3s ease;
+}
+
+.de-stats-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+}
+
+.de-stat-item { color: #666; }
+.de-stat-item b { font-weight: 600; }
+.de-stat-success b { color: #27ae60; }
+.de-stat-fail b { color: #e74c3c; }
+.de-stat-pending b { color: #f39c12; }
+
+/* ======= 滚动条美化 ======= */
+.de-table-wrap::-webkit-scrollbar { width: 5px; height: 5px; }
+.de-table-wrap::-webkit-scrollbar-track { background: transparent; }
+.de-table-wrap::-webkit-scrollbar-thumb { background: #ccc; border-radius: 3px; }

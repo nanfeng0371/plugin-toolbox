@@ -1,5 +1,5 @@
 /**
- * 调课助手 v4.2.0 — Toolbox 模块化版本（content.js）
+ * 调课助手 v4.2.1 — Toolbox 模块化版本（content.js）
  * 合并自 popup.js（UI逻辑）+ content/content.js（API调用）
  * 改动：popup→Shadow DOM 模块；API调用直接在 content script 执行；xlsx 解析委托 background
  * v4.1.0: 三段式课程匹配 — 支持输入课程名关键词，多结果时自动报错
@@ -640,6 +640,9 @@
     }
     let mdDash = str.match(/^(\d{1,2})-(\d{1,2})$/);
     if (mdDash) return cy + '-' + String(mdDash[1]).padStart(2, '0') + '-' + String(mdDash[2]).padStart(2, '0');
+    // 完整日期斜杠格式：2026/7/10 或 2026/07/10
+    let ymds = str.match(/^(\d{4})\/(\d{1,2})\/(\d{1,2})$/);
+    if (ymds) return ymds[1] + '-' + String(ymds[2]).padStart(2, '0') + '-' + String(ymds[3]).padStart(2, '0');
     let mdSlash = str.match(/^(\d{1,2})\/(\d{1,2})$/);
     if (mdSlash) return cy + '-' + String(mdSlash[1]).padStart(2, '0') + '-' + String(mdSlash[2]).padStart(2, '0');
     let mdCN = str.match(/^(\d{1,2})月(\d{1,2})[日号]?$/);

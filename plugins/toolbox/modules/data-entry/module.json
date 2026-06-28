@@ -1,9 +1,9 @@
 {
-  "name": "heatmap",
-  "label": "📊 排期分析",
-  "version": "1.0.0",
+  "name": "data-entry",
+  "label": "批量录入",
+  "version": "1.0.4",
   "icon": "",
-  "description": "排期热力图，异常检测+日历导出",
+  "description": "批量录入成绩，模板粘贴一键提交",
   "permissions": [],
   "hostPermissions": [],
   "hasBackground": true,

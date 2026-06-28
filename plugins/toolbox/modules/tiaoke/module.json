@@ -1,9 +1,9 @@
 {
   "name": "tiaoke",
   "label": "📚 调课助手",
-	"version": "4.2.0",
+	"version": "4.2.1",
 	"icon": "",
-	"description": "调课助手：改约+排课双模，支持三段式课程匹配+自定义星期排课",
+	"description": "改约+排课，批量调课一键提交",
   "permissions": [],
   "hostPermissions": [],
   "hasBackground": true,

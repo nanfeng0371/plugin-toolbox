@@ -3,7 +3,7 @@
   "label": "📋 每日看板",
   "version": "2.0.0",
   "icon": "",
-  "description": "辅导老师每日工作看板 - 7类学生分类+打勾追踪+CloudBase同步",
+  "description": "每日工作看板，学生分类追踪",
   "permissions": [],
   "hostPermissions": [],
   "hasBackground": true,

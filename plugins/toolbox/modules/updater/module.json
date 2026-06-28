@@ -3,7 +3,7 @@
   "label": "🔄 检查更新",
   "version": "1.0.0",
   "icon": "",
-  "description": "自动检测并安装插件更新，通过 Native Host 与本地通信",
+  "description": "一键检查更新，自动安装最新版",
   "permissions": [
     "nativeMessaging"
   ],
