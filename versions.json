@@ -1,5 +1,12 @@
 [
   {
+    "version": "2.2.127",
+    "buildTime": "2026-06-29T09:07:49.857Z",
+    "file": "toolbox-v2.2.127.crx",
+    "changes": [],
+    "rebuildCount": 0
+  },
+  {
     "version": "2.2.126",
     "buildTime": "2026-06-29T08:56:14.280Z",
     "file": "toolbox-v2.2.126.crx",

@@ -3,7 +3,7 @@
  * 合并自 popup.js（UI逻辑）+ content/content.js（API调用）
  * 改动：popup→Shadow DOM 模块；API调用直接在 content script 执行；xlsx 解析委托 background
  * v4.1.0: 三段式课程匹配 — 支持输入课程名关键词，多结果时自动报错
- * v4.5.0: 全学科排课+双层过滤（学科映射+禁止词全科/S班过滤）
+ * v4.5.1: 修复排课匹配逻辑——优先原始关键词（保留学期信息），回退映射词
  */
 (function () {
   'use strict';
@@ -1773,16 +1773,18 @@
       // v4.5.0: 过滤掉含禁止词的课程
       var available = filterBannedCourses(courses);
       var target = null;
-      // v4.5.0: 用映射后的课程类型匹配
-      var mapped = task.courseMapped || '';
-      var kw = mapped || task.courseKeyword.trim();
-      for (var kwLen = kw.length; kwLen >= 2 && !target; kwLen--) {
-        var subKw = kw.substring(0, kwLen);
+      // v4.5.1: 先用原始关键词递减匹配（保留学期信息如"暑假"），失败后回退映射词
+      var rawKw = (task.courseKeyword || '').trim();
+      for (var kwLen = rawKw.length; kwLen >= 2 && !target; kwLen--) {
+        var subKw = rawKw.substring(0, kwLen);
         target = available.find(function(c) { return c.bookStatus === 0 && (c.title || '').indexOf(subKw) !== -1; });
+      }
+      if (!target && task.courseMapped) {
+        target = available.find(function(c) { return c.bookStatus === 0 && (c.title || '').indexOf(task.courseMapped) !== -1; });
       }
       if (!target) {
         var availableTitles = available.filter(function(c){return c.bookStatus===0;}).map(function(c){return c.title;});
-        return { success:false, error:'未找到匹配课程"' + (mapped || task.courseKeyword) + '"（可选：' + (availableTitles.join('、')||'无可用课程') + '）' };
+        return { success:false, error:'未找到匹配课程"' + (task.courseKeyword || '') + '"（可选：' + (availableTitles.join('、')||'无可用课程') + '）' };
       }
       // Step2: 提交排课
       var times = calculateTimeRange(task.newDate, task.newTime);
