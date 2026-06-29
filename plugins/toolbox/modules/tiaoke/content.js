@@ -1,9 +1,9 @@
 /**
- * 调课助手 v4.3.0 — Toolbox 模块化版本（content.js）
+ * 调课助手 v4.5.3 — Toolbox 模块化版本（content.js）
  * 合并自 popup.js（UI逻辑）+ content/content.js（API调用）
  * 改动：popup→Shadow DOM 模块；API调用直接在 content script 执行；xlsx 解析委托 background
- * v4.1.0: 三段式课程匹配 — 支持输入课程名关键词，多结果时自动报错
- * v4.5.1: 修复排课匹配逻辑——优先原始关键词（保留学期信息），回退映射词
+ * v4.5.2: 学科映射+学期提取两步匹配
+ * v4.5.3: 去掉 bookStatus 限制（已排课程支持改约）+ 多匹配时报错列选项
  */
 (function () {
   'use strict';
@@ -43,6 +43,17 @@
   var COURSE_SUBJECT_MAP = { '数学': '思维', '语文': '人文', '英语': '演说', '物理': '科学', '化学': '实验' };
   var COURSE_SUBJECT_KEYS = Object.keys(COURSE_SUBJECT_MAP);
   var COURSE_BANNED_WORDS = ['全科', 'S班'];
+  // v4.5.2: 学期关键词（用于课程匹配去歧义，排序决定匹配优先级）
+  var COURSE_SEMESTER_WORDS = ['暑假', '秋季', '寒假', '春季', '期末', '期中', '冲刺'];
+
+  /** 从用户输入中提取学期关键词 */
+  function extractSemesterKeyword(raw) {
+    if (!raw) return '';
+    for (var si = 0; si < COURSE_SEMESTER_WORDS.length; si++) {
+      if (raw.indexOf(COURSE_SEMESTER_WORDS[si]) !== -1) return COURSE_SEMESTER_WORDS[si];
+    }
+    return '';
+  }
 
   /** 从课程名中提取学科并返回映射后的课程类型 */
   function mapCourseKeyword(rawKeyword) {
@@ -1261,16 +1272,17 @@
     return match ? parseInt(match[1], 10) : 0;
   }
 
-  function matchTargetClass(classList, userId, periodSort, courseKeyword) {
-    // 🆕 三段式匹配：有课程名 → 精确；无课程名且唯一 → 老逻辑；无课程名且多个 → 报 _ambiguous
+  function matchTargetClass(classList, userId, periodSort, courseKeyword, semester) {
+    // 🆕 v4.5.2: 学科映射 + 学期提取两步匹配
     if (courseKeyword) {
-      // 精确匹配：学生 + 讲次 + 课程名关键词
       return classList.find(function (item) {
         var itemUserId = String(item.studentId || item.userId || '');
         var itemPS = extractPeriodSort(item);
         if (itemUserId !== String(userId) || itemPS !== Number(periodSort)) return false;
         var cName = (item.courseName || item.className || '').toLowerCase();
-        return cName.indexOf(courseKeyword.toLowerCase()) !== -1;
+        var matchSubject = cName.indexOf(courseKeyword.toLowerCase()) !== -1;
+        var matchSemester = semester ? cName.indexOf(semester.toLowerCase()) !== -1 : true;
+        return matchSubject && matchSemester;
       }) || null;
     }
 
@@ -1303,10 +1315,11 @@
       if (!Array.isArray(classListCache) || classListCache.length === 0) {
         return { success: false, error: '课表数据为空' };
       }
-      // v4.5.0: 过滤掉含禁止词的课程 + 使用映射后的课程类型匹配
+      // v4.5.2: 过滤+映射+学期提取匹配
       var filteredList = filterBannedCourses(classListCache);
-      var matchKw = task.courseMapped || task.courseKeyword || '';
-      let targetClass = matchTargetClass(filteredList, task.userId, task.periodSort, matchKw);
+      var matchKw = task.courseMapped || '';
+      var matchSem = extractSemesterKeyword(task.courseKeyword);
+      let targetClass = matchTargetClass(filteredList, task.userId, task.periodSort, matchKw, matchSem);
       if (!targetClass) {
         if (task.courseKeyword) {
           return { success: false, error: '未找到包含"' + task.courseKeyword + '"的第' + task.periodSort + '讲课程' };
@@ -1427,6 +1440,11 @@
     isRunning = false;
     updateControlButtons();
     addLog('批量执行完成', 'info');
+    var failCount = taskList.filter(function(t){return t.status===TASK_STATUS.FAIL && !t._invalid;}).length;
+    if (failCount > 0) {
+      var failedTasks = taskList.filter(function(t){return t.status===TASK_STATUS.FAIL && !t._invalid;});
+      addFailSummaryBlock($('#tk-log-container'), failedTasks);
+    }
 
     // ★ 写入使用统计（调课不产生"报告"，只累加学生数和时间）
     try {
@@ -1606,7 +1624,7 @@
 
   function weeksToDisplay(weeks) {
     if (!weeks || !weeks.length) return '?';
-    var chars = ['日','一','二','三','四','五','六'];
+    var chars = ['日','一','二','三','四','五','六','日'];
     return weeks.map(function(d) { return chars[d]; }).join('');
   }
 
@@ -1765,6 +1783,21 @@
     container.appendChild(entry); container.scrollTop = container.scrollHeight;
   }
 
+  function addFailSummaryBlock(containerEl, failedTasks) {
+    if (!containerEl || !failedTasks || failedTasks.length === 0) return;
+    var block = document.createElement('div');
+    block.style.cssText = 'margin-top:8px;padding:8px 10px;border:2px solid #e74c3c;border-radius:6px;background:#fff5f5;font-size:12px;';
+    var items = failedTasks.map(function(t) {
+      return '<div style="padding:3px 0;color:#333;border-bottom:1px solid #fdd;">' +
+        '<span style="color:#e74c3c;font-weight:600;">#' + t.index + '</span> ' +
+        '<span style="color:#555;">' + (t.userId || '?') + '</span> ' +
+        '<span style="color:#e74c3c;">' + (t.error || '未知错误') + '</span></div>';
+    }).join('');
+    block.innerHTML = '<div style="font-weight:700;color:#e74c3c;margin-bottom:6px;font-size:13px;">❌ 失败详情（' + failedTasks.length + '条）</div>' + items;
+    containerEl.appendChild(block);
+    containerEl.scrollTop = containerEl.scrollHeight;
+  }
+
   async function executeScheduleTask(task) {
     try {
       // Step1: 获取课程列表
@@ -1773,18 +1806,26 @@
       // v4.5.0: 过滤掉含禁止词的课程
       var available = filterBannedCourses(courses);
       var target = null;
-      // v4.5.1: 先用原始关键词递减匹配（保留学期信息如"暑假"），失败后回退映射词
-      var rawKw = (task.courseKeyword || '').trim();
-      for (var kwLen = rawKw.length; kwLen >= 2 && !target; kwLen--) {
-        var subKw = rawKw.substring(0, kwLen);
-        target = available.find(function(c) { return c.bookStatus === 0 && (c.title || '').indexOf(subKw) !== -1; });
-      }
-      if (!target && task.courseMapped) {
-        target = available.find(function(c) { return c.bookStatus === 0 && (c.title || '').indexOf(task.courseMapped) !== -1; });
+      // v4.5.3: 学科映射 + 学期提取两步匹配（不去限制 bookStatus，已排课程也支持改约）
+      var mapped = mapCourseKeyword(task.courseKeyword);
+      var semKw = extractSemesterKeyword(task.courseKeyword);
+      if (mapped.mapped) {
+        var matches = available.filter(function(c) {
+          var title = c.title || '';
+          var matchSubject = title.indexOf(mapped.mapped) !== -1;
+          var matchSemester = semKw ? title.indexOf(semKw) !== -1 : true;
+          return matchSubject && matchSemester;
+        });
+        if (matches.length === 1) {
+          target = matches[0];
+        } else if (matches.length > 1) {
+          var matchNames = matches.map(function(c){ return c.title; }).join('、');
+          return { success:false, error:'匹配到' + matches.length + '门课（' + matchNames + '），请在课程名中加上学期关键词（如：暑假、秋季、春季、寒假、期末、期中）' };
+        }
       }
       if (!target) {
-        var availableTitles = available.filter(function(c){return c.bookStatus===0;}).map(function(c){return c.title;});
-        return { success:false, error:'未找到匹配课程"' + (task.courseKeyword || '') + '"（可选：' + (availableTitles.join('、')||'无可用课程') + '）' };
+        var allAvailable = available.map(function(c){return c.title;});
+        return { success:false, error:'未找到匹配课程"' + (task.courseKeyword || '') + '"（可选：' + (allAvailable.join('、')||'无可用课程') + '）' };
       }
       // Step2: 提交排课
       var times = calculateTimeRange(task.newDate, task.newTime);
@@ -1827,6 +1868,10 @@
     var s=scheduleTaskList.filter(function(t){return t.status===SCHEDULE_STATUS.SUCCESS;}).length;
     var f=scheduleTaskList.filter(function(t){return t.status===SCHEDULE_STATUS.FAIL;}).length;
     addScheduleLog('排课完成：成功'+s+'条，失败'+f+'条','info');
+    if (f > 0) {
+      var failedTasks = scheduleTaskList.filter(function(t){return t.status===SCHEDULE_STATUS.FAIL && !t._invalid;});
+      addFailSummaryBlock($('#tk-schedule-log-container'), failedTasks);
+    }
   }
 
   function retryScheduleFailed() {
