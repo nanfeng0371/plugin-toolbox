@@ -3,7 +3,7 @@
  * 合并自 popup.js（UI逻辑）+ content/content.js（API调用）
  * 改动：popup→Shadow DOM 模块；API调用直接在 content script 执行；xlsx 解析委托 background
  * v4.1.0: 三段式课程匹配 — 支持输入课程名关键词，多结果时自动报错
- * v4.2.0: 新增排课功能 — 学生进班首次排课，支持自定义星期，独立Tab
+ * v4.4.0: 新增课程名限制——排课/约课仅允许课程名含"思维"的课程
  */
 (function () {
   'use strict';
@@ -835,6 +835,9 @@
     if (task.periodSort === null || task.periodSort === undefined || !Number(task.periodSort)) {
       errors.push('讲次无效');
     }
+    if (task.courseKeyword && task.courseKeyword.indexOf('思维') === -1) {
+      errors.push('课程名不含"思维"（仅限排思维课程）');
+    }
     if (!task.newDate) {
       errors.push('日期为空或格式错误');
     }
@@ -859,6 +862,7 @@
 
   /**
    * 排课数据本地格式校验
+   * v4.4.0 新增：课程名必须包含"思维"二字
    */
   function validateScheduleRow(task) {
     var errors = [];
@@ -881,6 +885,8 @@
     }
     if (!task.courseKeyword) {
       errors.push('课程名不能为空');
+    } else if (task.courseKeyword.indexOf('思维') === -1) {
+      errors.push('课程名不含"思维"（仅限排思维课程）');
     }
     if (!task.weeks || !task.weeks.length) {
       errors.push('星期为空或格式错误（如 123567 或 一二三四五六）');

@@ -1,7 +1,7 @@
 {
   "name": "dailyboard",
   "label": "📋 每日看板",
-  "version": "2.0.0",
+  "version": "2.1.1",
   "icon": "",
   "description": "每日工作看板，学生分类追踪",
   "permissions": [],

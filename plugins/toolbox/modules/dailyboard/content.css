@@ -38,6 +38,8 @@
 .db-btn:hover{background:#e1e4ea;}
 .db-btn--primary{background:#4a6cf7;color:#fff;}
 .db-btn--primary:hover{background:#3b5ce4;}
+.db-btn--test-wecom{padding:8px 12px;border:1px dashed #4a6cf7;border-radius:8px;background:#f0f4ff;color:#4a6cf7;font-size:12px;cursor:pointer;transition:all 0.15s;text-align:center;}
+.db-btn--test-wecom:hover{background:#e3ecff;border-style:solid;}
 .db-close-btn{position:absolute;top:6px;right:10px;background:none;border:none;font-size:16px;cursor:pointer;color:#999;padding:3px 5px;border-radius:4px;flex-shrink:0;}
 .db-close-btn:hover{background:#f0f0f0;color:#333;}
 

@@ -1,5 +1,5 @@
 /* ==========================================
-   每日工作看板 v2.2.93 — content.js
+   每日工作看板 v2.2.124 — content.js
    表格式密集视图 + 标签筛选 + 报告富化 + CloudBase 直连同步
    ========================================== */
 
@@ -101,7 +101,11 @@
     lastScan: 0,        // 上次扫描时间戳
     alerted: {},        // 去重: "studentId_periodId" → true
     enabled: true,      // 默认开启
+    wecomEnabled: true,       // 企微推送默认开启
+    browserNotifyEnabled: false,  // 浏览器弹窗默认关闭
+    history: []          // 最近10条扫描记录
   };
+  const NF_HISTORY_MAX = 10;
   const NF_THRESHOLD = 40;
   const NF_SCAN_INTERVAL = 1200000;  // 20分钟
   const NF_CHECK_INTERVAL = 60000;   // 1分钟检查一次
@@ -1187,7 +1191,15 @@
         alerted: _nfMonitor.alerted,
         lastScan: _nfMonitor.lastScan,
         enabled: _nfMonitor.enabled,
+        wecomEnabled: _nfMonitor.wecomEnabled,
+        browserNotifyEnabled: _nfMonitor.browserNotifyEnabled,
+        history: _nfMonitor.history.slice(-NF_HISTORY_MAX),
       }));
+      // 同步到 chrome.storage.local（跨浏览器重启保持）
+      chrome.storage.local.set({
+        db_wecomEnabled: _nfMonitor.wecomEnabled,
+        db_browserNotifyEnabled: _nfMonitor.browserNotifyEnabled,
+      });
     } catch (e) { /* 非关键 */ }
   }
 
@@ -1198,8 +1210,18 @@
         var d = JSON.parse(raw);
         _nfMonitor.alerted = d.alerted || {};
         _nfMonitor.lastScan = d.lastScan || 0;
-        _nfMonitor.enabled = d.enabled !== false;  // 默认 true
+        _nfMonitor.enabled = d.enabled !== false;
+        if (typeof d.wecomEnabled === 'boolean') _nfMonitor.wecomEnabled = d.wecomEnabled;
+        if (typeof d.browserNotifyEnabled === 'boolean') _nfMonitor.browserNotifyEnabled = d.browserNotifyEnabled;
+        _nfMonitor.history = Array.isArray(d.history) ? d.history.slice(-NF_HISTORY_MAX) : [];
       }
+    } catch (e) { /* 非关键 */ }
+    // 从 chrome.storage.local 加载（覆盖 sessionStorage 的同名设置，chrome.storage 更持久）
+    try {
+      chrome.storage.local.get(['db_wecomEnabled', 'db_browserNotifyEnabled'], function (d) {
+        if (typeof d.db_wecomEnabled === 'boolean') _nfMonitor.wecomEnabled = d.db_wecomEnabled;
+        if (typeof d.db_browserNotifyEnabled === 'boolean') _nfMonitor.browserNotifyEnabled = d.db_browserNotifyEnabled;
+      });
     } catch (e) { /* 非关键 */ }
   }
 
@@ -1237,6 +1259,78 @@
     var nextStr = nextMin <= 0 ? '即将扫描' : nextMin + '分钟后';
     var alertCount = Object.keys(_nfMonitor.alerted).length;
     el.textContent = '\uD83D\uDD14 监控中 · 上次扫描 ' + lastStr + ' · 下次约' + nextStr + ' · 今日已提醒 ' + alertCount + ' 人';
+    el.style.cursor = 'pointer';
+    el.title = '点击查看扫描历史';
+    // 使用 onclick 属性（避免 addEventListener 重复绑定的问题）
+    el.onclick = function () { showScanHistory(); };
+  }
+
+  function showScanHistory() {
+    // 移除已有弹窗
+    var existing = panelRoot.querySelector('.db-history-popup');
+    if (existing) { existing.remove(); return; }
+    
+    var popup = document.createElement('div');
+    popup.className = 'db-history-popup';
+    popup.style.cssText = 'position:absolute;top:100%;right:10px;margin-top:4px;background:#fff;border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,0.2);z-index:9999;padding:14px 18px;min-width:340px;max-width:420px;max-height:420px;overflow-y:auto;font-size:12px;';
+    
+    var title = '\uD83D\uDCCB 最近 ' + NF_HISTORY_MAX + ' 次扫描记录';
+    if (_nfMonitor.history.length === 0) {
+      popup.innerHTML = '<div style="font-weight:600;margin-bottom:10px;">' + title + '</div>' +
+        '<div style="color:#999;text-align:center;padding:20px;">暂无扫描记录<br><span style="font-size:11px;">监控启动后会自动记录</span></div>' +
+        '<div style="text-align:right;margin-top:8px;"><button class="db-history-close-btn" style="background:none;border:1px solid #ddd;padding:3px 12px;border-radius:6px;cursor:pointer;font-size:11px;color:#888;">关闭</button></div>';
+    } else {
+      var rows = '';
+      _nfMonitor.history.slice().reverse().forEach(function (h) {
+        var t = new Date(h.time);
+        var timeStr = t.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        var status = h.alertsFound > 0 
+          ? '\u26A0\uFE0F ' + h.alertsFound + '人异常' 
+          : '\u2705 无异常';
+        var wecomIcon = h.wecomAttempted ? '\uD83D\uDCAC已推送' : '\u2014';
+        var browserIcon = h.browserNotified ? '\uD83D\uDD14已弹窗' : '\u2014';
+        rows += '<div style="display:flex;align-items:center;padding:5px 0;border-bottom:1px solid #f0f0f0;gap:8px;font-size:11px;">' +
+          '<span style="color:#888;min-width:52px;">' + timeStr + '</span>' +
+          '<span style="min-width:55px;">' + status + '</span>' +
+          '<span style="color:#666;min-width:55px;">共' + h.totalStudents + '学生</span>' +
+          '<span style="color:#1976d2;min-width:55px;">' + wecomIcon + '</span>' +
+          '<span style="color:#e65100;min-width:48px;">' + browserIcon + '</span>' +
+          '</div>';
+      });
+      popup.innerHTML = '<div style="font-weight:600;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;">' +
+        '<span>' + title + '</span>' +
+        '<span style="font-size:10px;color:#999;">共扫描 ' + _nfMonitor.history.length + ' 次</span>' +
+        '</div>' +
+        '<div style="display:flex;font-size:10px;color:#aaa;border-bottom:2px solid #e8eaed;padding-bottom:3px;gap:8px;">' +
+          '<span style="min-width:52px;">时间</span>' +
+          '<span style="min-width:55px;">结果</span>' +
+          '<span style="min-width:55px;">学生数</span>' +
+          '<span style="min-width:55px;">企微推送</span>' +
+          '<span style="min-width:48px;">弹窗提醒</span>' +
+        '</div>' +
+        rows +
+        '<div style="text-align:right;margin-top:8px;"><button class="db-history-close-btn" style="background:none;border:1px solid #ddd;padding:3px 12px;border-radius:6px;cursor:pointer;font-size:11px;color:#888;">关闭</button></div>';
+    }
+    
+    // 添加到面板的 Shadow DOM 内（放在 header 区域更合理）
+    var headerArea = panelRoot.querySelector('.db-header');
+    if (headerArea) {
+      headerArea.appendChild(popup);
+    } else {
+      panelRoot.appendChild(popup);
+    }
+    
+    // 关闭按钮
+    var cb = popup.querySelector('.db-history-close-btn');
+    if (cb) { cb.addEventListener('click', function () { popup.remove(); }); }
+    // 点击弹窗外部 → 关闭（Shadow DOM 内用 panelRoot 监听）
+    setTimeout(function () {
+      var closeOnOutside = function (e) {
+        if (!popup || !popup.parentNode) { panelRoot.removeEventListener('click', closeOnOutside); return; }
+        if (!popup.contains(e.target)) { popup.remove(); panelRoot.removeEventListener('click', closeOnOutside); }
+      };
+      panelRoot.addEventListener('click', closeOnOutside);
+    }, 100);
   }
 
   function showNfNotification(alerts) {
@@ -1253,6 +1347,95 @@
       requireInteraction: true,
     });
     notif.onclick = function () { /* 纯提醒，不跳转 */ };
+  }
+
+  /* ── 企微推送 ── */
+  function sendWecomMessage(content) {
+    return fetch('https://ai-genesis.yuaiweiwu.com/prod-api/student-center-ai/common/teacher/wecom/send-self', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ content: content })
+    })
+    .then(function (r) { return r.json(); })
+    .then(function (data) {
+      if (data.code === '000000') {
+        console.log('[企微推送] 发送成功');
+        return { success: true };
+      } else {
+        console.error('[企微推送] 发送失败', data.mesg);
+        return { success: false, error: data.mesg };
+      }
+    })
+    .catch(function (err) {
+      console.error('[企微推送] 网络错误', err);
+      return { success: false, error: String(err) };
+    });
+  }
+
+  function buildWecomMessage(alerts) {
+    var now = new Date();
+    var timeStr = String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0');
+    // 使用真实换行符，JSON.stringify 会自动转义为 \n
+    var lines = [
+      '\uD83D\uDCE2 上课异常提醒（' + timeStr + '）',
+      '',
+      '共有' + alerts.length + '名学生不专注率≥40%：'
+    ];
+    alerts.forEach(function (a, i) {
+      lines.push((i + 1) + '. ' + a.name + '（不专注率 ' + a.rate + '%）');
+    });
+    lines.push('');
+    lines.push('请关注学生学习状态。');
+    return lines.join('\n');
+  }
+
+  function checkAndSendWecom(alerts) {
+    if (!_nfMonitor.wecomEnabled) return;
+    if (!alerts || alerts.length === 0) return;
+    // 按 periodId 分组（同一课节合并为一条消息）
+    var groups = {};
+    alerts.forEach(function (a) {
+      var periodId = String(a.periodId || 'unknown');
+      if (!groups[periodId]) {
+        groups[periodId] = { periodId: periodId, alerts: [], startTime: a.startTime || '' };
+      }
+      groups[periodId].alerts.push(a);
+    });
+    // 逐组检查去重并发送
+    Object.keys(groups).forEach(function (key) {
+      var group = groups[key];
+      var dedupKey = 'wecom_' + group.periodId;
+      chrome.storage.local.get([dedupKey], function (result) {
+        if (result[dedupKey]) return;  // 已通知
+        var message = buildWecomMessage(group.alerts);
+        sendWecomMessage(message).then(function (res) {
+          if (res.success) {
+            var record = {};
+            record[dedupKey] = Date.now();
+            chrome.storage.local.set(record);
+          }
+        });
+      });
+    });
+  }
+
+  function cleanOldWecomDedupRecords() {
+    chrome.storage.local.get(null, function (all) {
+      var now = Date.now();
+      var keysToRemove = [];
+      Object.keys(all).forEach(function (key) {
+        if (key.indexOf('wecom_') === 0 && typeof all[key] === 'number') {
+          if (now - all[key] > 24 * 60 * 60 * 1000) {
+            keysToRemove.push(key);
+          }
+        }
+      });
+      if (keysToRemove.length > 0) {
+        chrome.storage.local.remove(keysToRemove);
+        console.log('[企微推送] 清理旧去重记录 ' + keysToRemove.length + ' 条');
+      }
+    });
   }
 
   async function scanAndNotify() {
@@ -1279,14 +1462,34 @@
       }
       if (!name) name = r.studentName || ('学员' + r.studentId);
       var grade = r.gradeName || '';
-      alerts.push({ name: name + (grade ? '（' + grade + '）' : ''), rate: rate });
+      alerts.push({ name: name + (grade ? '（' + grade + '）' : ''), rate: rate, periodId: r.aiPeriodId || r.classId, startTime: r.startTime || '' });
     });
     if (alerts.length > 0) {
-      showNfNotification(alerts);
-      console.log('[DailyBoard] \uD83D\uDD14 不专注提醒: ' + alerts.length + ' 名学生');
+      // 浏览器弹窗提醒（受开关控制）
+      if (_nfMonitor.browserNotifyEnabled) {
+        showNfNotification(alerts);
+      }
+      // 企微推送（受开关控制，按课节去重合并）
+      if (_nfMonitor.wecomEnabled) {
+        checkAndSendWecom(alerts);
+      }
+      console.log('[DailyBoard] \uD83D\uDD14 不专注提醒: ' + alerts.length + ' 名学生（弹窗:' + (_nfMonitor.browserNotifyEnabled ? '开' : '关') + ' 企微:' + (_nfMonitor.wecomEnabled ? '开' : '关') + '）');
+    }
+    // 记录扫描历史
+    _nfMonitor.history.push({
+      time: Date.now(),
+      totalStudents: state.rawRows.length,
+      alertsFound: alerts.length,
+      wecomAttempted: alerts.length > 0 && _nfMonitor.wecomEnabled,
+      browserNotified: alerts.length > 0 && _nfMonitor.browserNotifyEnabled,
+    });
+    if (_nfMonitor.history.length > NF_HISTORY_MAX) {
+      _nfMonitor.history = _nfMonitor.history.slice(-NF_HISTORY_MAX);
     }
     saveNfMonitorState();
     updateNfStatusUI();
+    // 清理24小时以上的企微去重记录（异步，不影响主流程）
+    cleanOldWecomDedupRecords();
   }
 
   function startNotFocusMonitor() {
@@ -2052,7 +2255,7 @@
     var backdrop = document.createElement('div');
     backdrop.className = 'db-modal-backdrop';
     backdrop.innerHTML =
-      '<div class="db-modal">' +
+      '<div class="db-modal" style="min-width:360px;">' +
         '<div class="db-modal-title">⚙️ 教师设置</div>' +
         '<div class="db-modal-body">设置学科和年级，数据将写入云端供管理看板使用</div>' +
         '<input id="db-set-keywords" type="text" placeholder="课程名关键字（逗号分隔，如：初一思维,初二思维）" value="' + esc(state.courseNameKeywords || '') + '" style="width:100%;padding:6px;border:1px solid #ddd;border-radius:6px;font-size:12px;margin-bottom:6px;box-sizing:border-box;">' +
@@ -2073,6 +2276,20 @@
           '<option value="">-- 选择中心（可选）--</option>' +
           '<option' + sel(state.teacher.center, '郑州') + '>郑州</option>' +
         '</select>' +
+        '<div style="border-top:1px solid #e8eaed;margin:10px 0;padding-top:8px;">' +
+          '<div class="db-modal-body" style="font-weight:600;margin-bottom:6px;">📢 通知设置</div>' +
+          '<label style="display:flex;align-items:center;gap:8px;margin-bottom:8px;cursor:pointer;font-size:13px;">' +
+            '<input type="checkbox" id="db-set-wecom"' + (_nfMonitor.wecomEnabled ? ' checked' : '') + ' style="width:16px;height:16px;">' +
+            '<span>💬 企微推送（爱芯小助手）</span>' +
+            '<span style="font-size:11px;color:#999;">默认：开启</span>' +
+          '</label>' +
+          '<label style="display:flex;align-items:center;gap:8px;margin-bottom:8px;cursor:pointer;font-size:13px;">' +
+            '<input type="checkbox" id="db-set-browser-notify"' + (_nfMonitor.browserNotifyEnabled ? ' checked' : '') + ' style="width:16px;height:16px;">' +
+            '<span>🔔 浏览器弹窗提醒</span>' +
+            '<span style="font-size:11px;color:#999;">默认：关闭</span>' +
+          '</label>' +
+          '<button class="db-btn db-btn--test-wecom" id="db-test-wecom" style="width:100%;margin-top:4px;">📨 测试企微推送（发送一条测试消息）</button>' +
+        '</div>' +
         '<div class="db-modal-actions">' +
           '<button class="db-btn" id="db-set-cancel">取消</button>' +
           '<button class="db-btn db-btn--primary" id="db-set-save">保存</button>' +
@@ -2083,6 +2300,10 @@
     backdrop.querySelector('#db-set-save').addEventListener('click', function () {
       saveSettings(backdrop.querySelector('#db-set-subject').value, backdrop.querySelector('#db-set-grade').value, backdrop.querySelector('#db-set-center').value);
       saveCourseKeywords(backdrop.querySelector('#db-set-keywords').value);
+      // 保存通知设置
+      _nfMonitor.wecomEnabled = backdrop.querySelector('#db-set-wecom').checked;
+      _nfMonitor.browserNotifyEnabled = backdrop.querySelector('#db-set-browser-notify').checked;
+      saveNfMonitorState();
       state.teacher.subject = backdrop.querySelector('#db-set-subject').value;
       state.teacher.grade = backdrop.querySelector('#db-set-grade').value;
       state.teacher.center = backdrop.querySelector('#db-set-center').value;
@@ -2094,6 +2315,28 @@
         renderContent(teacherName(), state.categories, p);
       }
     });
+    // 测试企微推送按钮
+    var testWecomBtn = backdrop.querySelector('#db-test-wecom');
+    if (testWecomBtn) {
+      testWecomBtn.addEventListener('click', function () {
+        testWecomBtn.disabled = true;
+        testWecomBtn.textContent = '⏳ 发送中...';
+        sendWecomMessage('\uD83D\uDCE2 测试消息\n\n这是一条测试推送，如果您看到这条消息，说明企微推送已配置成功。').then(function (res) {
+          if (res.success) {
+            testWecomBtn.textContent = '✅ 发送成功！请检查企微';
+            testWecomBtn.style.color = '#2e7d32';
+          } else {
+            testWecomBtn.textContent = '❌ 发送失败: ' + (res.error || '未知错误');
+            testWecomBtn.style.color = '#c62828';
+          }
+          setTimeout(function () {
+            testWecomBtn.disabled = false;
+            testWecomBtn.textContent = '\uD83D\uDCE8 测试企微推送（发送一条测试消息）';
+            testWecomBtn.style.color = '';
+          }, 3000);
+        });
+      });
+    }
     backdrop.addEventListener('click', function (e) { if (e.target === backdrop) backdrop.remove(); });
   }
 
@@ -3162,6 +3405,8 @@
       '.db-btn:hover{background:#e1e4ea;}',
       '.db-btn--primary{background:#4a6cf7;color:#fff;}',
       '.db-btn--primary:hover{background:#3b5ce4;}',
+      '.db-btn--test-wecom{padding:8px 12px;border:1px dashed #4a6cf7;border-radius:8px;background:#f0f4ff;color:#4a6cf7;font-size:12px;cursor:pointer;transition:all 0.15s;text-align:center;}',
+      '.db-btn--test-wecom:hover{background:#e3ecff;border-style:solid;}',
       '.db-close-btn{position:absolute;top:6px;right:10px;background:none;border:none;font-size:16px;cursor:pointer;color:#999;padding:3px 5px;border-radius:4px;flex-shrink:0;}',
       '.db-close-btn:hover{background:#f0f0f0;color:#333;}',      /* 标签筛选 */
       '.db-filter-bar{display:flex;gap:5px;padding:8px 14px;overflow-x:auto;border-bottom:1px solid #f0f0f0;flex-shrink:0;background:#fafbfc;}',
