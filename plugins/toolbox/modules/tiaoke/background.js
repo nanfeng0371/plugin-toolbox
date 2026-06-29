@@ -100,8 +100,8 @@ self.__registerModuleHandlers('tiaoke', {
   GENERATE_XLSX: function (data, sender) {
     try {
       if (typeof XLSX === 'undefined') return { xlsxBase64: '', error: 'xlsx 库未加载' };
-      var headers = ['学员ID', '首课日期', '上课时间', '课程名', '星期'];
-      var sample = ['1425217(示例)', '2026-07-10', '14:00', '暑假课', '1234567'];
+      var headers = ['学员ID', '首课日期', '上课时间', '课程名（学科+学期，如数学暑假课）', '星期'];
+      var sample = ['1425217(示例)', '2026-07-10', '14:00', '数学暑假课', '1234567'];
       var rows = [headers, sample];
       for (var r = 0; r < 10; r++) rows.push(['', '', '', '', '']);
       var ws = XLSX.utils.aoa_to_sheet(rows);

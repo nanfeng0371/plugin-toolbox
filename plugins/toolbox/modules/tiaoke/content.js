@@ -3,7 +3,7 @@
  * 合并自 popup.js（UI逻辑）+ content/content.js（API调用）
  * 改动：popup→Shadow DOM 模块；API调用直接在 content script 执行；xlsx 解析委托 background
  * v4.1.0: 三段式课程匹配 — 支持输入课程名关键词，多结果时自动报错
- * v4.4.0: 新增课程名限制——排课/约课仅允许课程名含"思维"的课程
+ * v4.5.0: 全学科排课+双层过滤（学科映射+禁止词全科/S班过滤）
  */
 (function () {
   'use strict';
@@ -38,6 +38,34 @@
   let historyRecords = [];
   let currentToken = '';
   let activeInnerTab = 'main';  // 默认显示 调课 页
+
+  // v4.5.0: 学科→课程类型映射表
+  var COURSE_SUBJECT_MAP = { '数学': '思维', '语文': '人文', '英语': '演说', '物理': '科学', '化学': '实验' };
+  var COURSE_SUBJECT_KEYS = Object.keys(COURSE_SUBJECT_MAP);
+  var COURSE_BANNED_WORDS = ['全科', 'S班'];
+
+  /** 从课程名中提取学科并返回映射后的课程类型 */
+  function mapCourseKeyword(rawKeyword) {
+    if (!rawKeyword) return { subject: '', mapped: '' };
+    for (var si = 0; si < COURSE_SUBJECT_KEYS.length; si++) {
+      var subj = COURSE_SUBJECT_KEYS[si];
+      if (rawKeyword.indexOf(subj) !== -1) {
+        return { subject: subj, mapped: COURSE_SUBJECT_MAP[subj] };
+      }
+    }
+    return { subject: '', mapped: '' };
+  }
+
+  /** 从课程列表中过滤掉含禁止词的课程 */
+  function filterBannedCourses(courses) {
+    return courses.filter(function(c) {
+      var name = c.title || c.courseName || c.className || '';
+      for (var bi = 0; bi < COURSE_BANNED_WORDS.length; bi++) {
+        if (name.indexOf(COURSE_BANNED_WORDS[bi]) !== -1) return false;
+      }
+      return true;
+    });
+  }
 
   // ===== Shadow DOM =====
   let shadowRoot = window.__shadowRoots__ && window.__shadowRoots__.tiaoke;
@@ -775,7 +803,7 @@
     let newTime = parseNaturalTime(text);
     if (!newTime) return null;
     // rawName 优先用中文名，如果有纯数字ID则放到 rawId 里
-    return { rawName: rawName, rawPhone: rawPhone, rawId: rawId, periodSort: periodSort, newDate: newDate, newTime: newTime, courseKeyword: courseKeyword };
+    return { rawName: rawName, rawPhone: rawPhone, rawId: rawId, periodSort: periodSort, newDate: newDate, newTime: newTime, courseKeyword: courseKeyword, courseMapped: mapCourseKeyword(courseKeyword).mapped };
   }
 
   // ===== 学员匹配 =====
@@ -816,7 +844,7 @@
       if (/学员|第几讲|日期|时间|姓名|手机|ID/i.test(line) && /[,，\t\s]/.test(line) && line.length < 30) continue;
       let task = parseOneLine(line, i);
       if (!task) { addLog('第' + (i + 1) + '行无法解析: ' + line.substring(0, 60), 'warn'); continue; }
-      tasks.push({ index: tasks.length + 1, userId: task.userId, periodSort: task.periodSort, newDate: task.newDate, newTime: task.newTime, matchedName: task.matchedName || '', courseKeyword: task.courseKeyword || '', status: TASK_STATUS.PENDING, error: '', detail: null });
+      tasks.push({ index: tasks.length + 1, userId: task.userId, periodSort: task.periodSort, newDate: task.newDate, newTime: task.newTime, matchedName: task.matchedName || '', courseKeyword: task.courseKeyword || '', courseMapped: task.courseMapped || '', status: TASK_STATUS.PENDING, error: '', detail: null });
     }
     // 本地格式校验
     tasks.forEach(validateRescheduleRow);
@@ -835,8 +863,21 @@
     if (task.periodSort === null || task.periodSort === undefined || !Number(task.periodSort)) {
       errors.push('讲次无效');
     }
-    if (task.courseKeyword && task.courseKeyword.indexOf('思维') === -1) {
-      errors.push('课程名不含"思维"（仅限排思维课程）');
+    if (task.courseKeyword) {
+      // v4.5.0: 检查禁止词
+      for (var bi = 0; bi < COURSE_BANNED_WORDS.length; bi++) {
+        if (task.courseKeyword.indexOf(COURSE_BANNED_WORDS[bi]) !== -1) {
+          errors.push('课程名不能包含"' + COURSE_BANNED_WORDS[bi] + '"（请只排普通课程）');
+          break;
+        }
+      }
+      // v4.5.0: 检查是否包含学科
+      if (errors.length === 0) {
+        var mapped = mapCourseKeyword(task.courseKeyword);
+        if (!mapped.subject) {
+          errors.push('课程名需包含学科（数学/语文/英语/物理/化学）');
+        }
+      }
     }
     if (!task.newDate) {
       errors.push('日期为空或格式错误');
@@ -885,8 +926,21 @@
     }
     if (!task.courseKeyword) {
       errors.push('课程名不能为空');
-    } else if (task.courseKeyword.indexOf('思维') === -1) {
-      errors.push('课程名不含"思维"（仅限排思维课程）');
+    } else {
+      // v4.5.0: 检查禁止词
+      for (var bi2 = 0; bi2 < COURSE_BANNED_WORDS.length; bi2++) {
+        if (task.courseKeyword.indexOf(COURSE_BANNED_WORDS[bi2]) !== -1) {
+          errors.push('课程名不能包含"' + COURSE_BANNED_WORDS[bi2] + '"（请只排普通课程）');
+          break;
+        }
+      }
+      // v4.5.0: 检查是否包含学科
+      if (errors.length === 0) {
+        var mapped2 = mapCourseKeyword(task.courseKeyword);
+        if (!mapped2.subject) {
+          errors.push('课程名需包含学科（数学/语文/英语/物理/化学）');
+        }
+      }
     }
     if (!task.weeks || !task.weeks.length) {
       errors.push('星期为空或格式错误（如 123567 或 一二三四五六）');
@@ -1025,7 +1079,8 @@
     let newTime = timeVal ? normalizeTime(timeVal) : null;
 
     if (userId && periodSort !== null && newDate && newTime) {
-      return { userId: userId, periodSort: periodSort, newDate: newDate, newTime: newTime, courseKeyword: courseKeyword };
+      var mapped = mapCourseKeyword(courseKeyword);
+      return { userId: userId, periodSort: periodSort, newDate: newDate, newTime: newTime, courseKeyword: courseKeyword, courseMapped: mapped.mapped };
     }
     return null;
   }
@@ -1248,7 +1303,10 @@
       if (!Array.isArray(classListCache) || classListCache.length === 0) {
         return { success: false, error: '课表数据为空' };
       }
-      let targetClass = matchTargetClass(classListCache, task.userId, task.periodSort, task.courseKeyword || '');
+      // v4.5.0: 过滤掉含禁止词的课程 + 使用映射后的课程类型匹配
+      var filteredList = filterBannedCourses(classListCache);
+      var matchKw = task.courseMapped || task.courseKeyword || '';
+      let targetClass = matchTargetClass(filteredList, task.userId, task.periodSort, matchKw);
       if (!targetClass) {
         if (task.courseKeyword) {
           return { success: false, error: '未找到包含"' + task.courseKeyword + '"的第' + task.periodSort + '讲课程' };
@@ -1586,10 +1644,11 @@
       var dateStr = fields[1];
       var timeStr = fields[2];
       var courseKeyword = fields[3];
+      var courseMapped = mapCourseKeyword(courseKeyword).mapped;
       var weekStr = fields[4] || '';
       var weeks = parseWeek(weekStr);
       if (!weeks) {
-        tasks.push({ index:tasks.length+1, userId:userId, courseKeyword:courseKeyword, newDate:dateStr, newTime:timeStr, weeks:null, weeksDisplay:weekStr||'(未填)', status:SCHEDULE_STATUS.FAIL, error:'星期未填或格式错误', detail:null });
+        tasks.push({ index:tasks.length+1, userId:userId, courseKeyword:courseKeyword, courseMapped:courseMapped, newDate:dateStr, newTime:timeStr, weeks:null, weeksDisplay:weekStr||'(未填)', status:SCHEDULE_STATUS.FAIL, error:'星期未填或格式错误', detail:null });
         addScheduleLog('第'+(i+1)+'行星期参数无效: '+weekStr,'warn');
         continue;
       }
@@ -1597,7 +1656,7 @@
         if (userId.indexOf('示例') >= 0) continue; // 跳过示例行
         addScheduleLog('第'+(i+1)+'行学员ID无效: '+userId,'warn'); continue;
       }
-      tasks.push({ index:tasks.length+1, userId:userId, courseKeyword:courseKeyword, newDate:normalizeDate(dateStr), newTime:normalizeTime(timeStr), weeks:weeks, weeksDisplay:weeksToDisplay(weeks), status:SCHEDULE_STATUS.PENDING, error:'', detail:null });
+      tasks.push({ index:tasks.length+1, userId:userId, courseKeyword:courseKeyword, courseMapped:courseMapped, newDate:normalizeDate(dateStr), newTime:normalizeTime(timeStr), weeks:weeks, weeksDisplay:weeksToDisplay(weeks), status:SCHEDULE_STATUS.PENDING, error:'', detail:null });
     }
     // 本地格式校验
     tasks.forEach(function(t) { if (t.status === SCHEDULE_STATUS.PENDING) validateScheduleRow(t); });
@@ -1711,15 +1770,19 @@
       // Step1: 获取课程列表
       var courseResp = await apiRequest(API_BASE + '/ai/user/course/list?userId=' + task.userId + '&courseClassify=3');
       var courses = (courseResp.data && courseResp.data.courseList) || [];
+      // v4.5.0: 过滤掉含禁止词的课程
+      var available = filterBannedCourses(courses);
       var target = null;
-      var kw = task.courseKeyword.trim();
+      // v4.5.0: 用映射后的课程类型匹配
+      var mapped = task.courseMapped || '';
+      var kw = mapped || task.courseKeyword.trim();
       for (var kwLen = kw.length; kwLen >= 2 && !target; kwLen--) {
         var subKw = kw.substring(0, kwLen);
-        target = courses.find(function(c) { return c.bookStatus === 0 && c.title.indexOf(subKw) !== -1; });
+        target = available.find(function(c) { return c.bookStatus === 0 && (c.title || '').indexOf(subKw) !== -1; });
       }
       if (!target) {
-        var available = courses.filter(function(c){return c.bookStatus===0;}).map(function(c){return c.title;});
-        return { success:false, error:'未找到匹配课程"' + task.courseKeyword + '"（可选：' + (available.join('、')||'无未排课程') + '）' };
+        var availableTitles = available.filter(function(c){return c.bookStatus===0;}).map(function(c){return c.title;});
+        return { success:false, error:'未找到匹配课程"' + (mapped || task.courseKeyword) + '"（可选：' + (availableTitles.join('、')||'无可用课程') + '）' };
       }
       // Step2: 提交排课
       var times = calculateTimeRange(task.newDate, task.newTime);
