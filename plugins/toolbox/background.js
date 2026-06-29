@@ -63,7 +63,8 @@
     async getAll() {
       // 尝试从缓存读取
       const cached = await this._readCache();
-      if (cached && cached.length > 0) {
+      // 如果缓存模块数 ≠ 已知模块数，说明扩展更新过，跳过缓存重新扫描
+      if (cached && cached.length === KNOWN_MODULES.length) {
         // 合并 enabled 状态（存储中可能被用户修改过）
         const enabledMap = await this._getEnabledMap();
         return cached.map((mod) => ({
