@@ -1,5 +1,5 @@
 /**
- * 批量录入成绩 v1.1.0 — Toolbox 模块化版本（content.js）
+ * 批量录入成绩 v1.2.0 — Toolbox 模块化版本（content.js）
  *
  * UI 对标调课助手排课 Tab 设计语言：
  * - 下载模板 + 提示文字 + 大文本框 + 格式说明 + 蓝色大解析按钮
@@ -52,6 +52,7 @@
   var entryList = [];
   var isRunning = false;
   var studentNameCache = {};
+  var studentRegIdCache = {};
 
   // ===== Shadow DOM =====
   var shadowRoot = window.__shadowRoots__ && window.__shadowRoots__['data-entry'];
@@ -169,7 +170,7 @@
 
   // ===== 解析数据 =====
 
-  function parseData() {
+  async function parseData() {
     var ta = $('#de-input-paste');
     if (!ta) return;
     var text = ta.value.trim();
@@ -195,7 +196,6 @@
 
     if (parsed.errors.length > 0 || invalidCount > 0) {
       var allErrs = parsed.errors.slice();
-      // 加入格式错误行
       for (var ei = 0; ei < entryList.length; ei++) {
         if (entryList[ei].status === STATUS.FAIL && entryList[ei].errorMsg) {
           allErrs.push('第' + (ei + 1) + '行 ' + entryList[ei].errorMsg);
@@ -212,31 +212,26 @@
     show('de-action-section');
     hide('de-btn-reset');
 
-    // 更新底部计数
     var hintEl = $('#de-empty-hint');
     if (hintEl) hintEl.innerHTML = '待录入条数: <b>' + validCount + '</b>' + (invalidCount > 0 ? '（' + invalidCount + '条格式错误）' : '');
 
-    // 有格式错误时禁用执行按钮
     var btnExec = $('#de-btn-exec');
     if (btnExec) {
       btnExec.disabled = invalidCount > 0;
       btnExec.textContent = invalidCount > 0 ? '▶ 有格式错误，请修正后重试' : '▶ 开始录入';
     }
 
-    // 重置进度条
     updateProgress(0);
 
-    // 批量获取姓名
+    // 批量获取姓名和登记ID（等拿到后再更新预览，确保录入时 id 就绪）
     var ids = entryList.map(function (e) { return e.studentId; });
-    batchFetchNames(ids).then(function () {
-      for (var i = 0; i < entryList.length; i++) {
-        var sid = String(entryList[i].studentId);
-        if (studentNameCache[sid]) {
-          entryList[i].name = studentNameCache[sid];
-        }
-      }
-      renderPreviewTable();
-    });
+    await batchFetchNames(ids);
+    for (var i = 0; i < entryList.length; i++) {
+      var sid = String(entryList[i].studentId);
+      if (studentNameCache[sid]) entryList[i].name = studentNameCache[sid];
+      if (studentRegIdCache[sid] && !entryList[i].id) entryList[i].id = studentRegIdCache[sid];
+    }
+    renderPreviewTable();
   }
 
   // ===== 粘贴解析 =====
@@ -294,7 +289,7 @@
       }
 
       valid.push({
-        id: '',
+        id: studentRegIdCache[studentId] || '',
         studentId: studentId,
         name: studentNameCache[studentId] || '',
         examType: examType,
@@ -480,6 +475,7 @@
     renderSingleRowStatus(item.index, entry);
 
     try {
+      console.log('[批量录入] 提交: studentId=' + entry.studentId + ', id=' + (entry.id || '(空)') + ', subject=' + entry.subject);
       var body = {
         id: entry.id || '',
         studentId: String(entry.studentId),
@@ -539,6 +535,11 @@
     } catch (e) { /* ignore */ }
 
     try {
+      var raw2 = localStorage.getItem('de_regid_cache');
+      if (raw2) studentRegIdCache = JSON.parse(raw2);
+    } catch (e) { /* ignore */ }
+
+    try {
       chrome.storage.local.get(['studentRoster'], function (result) {
         if (result.studentRoster && Array.isArray(result.studentRoster)) {
           result.studentRoster.forEach(function (s) {
@@ -546,38 +547,117 @@
             var name = s.name || s.studentName || '';
             if (id && name && !studentNameCache[id]) studentNameCache[id] = name;
           });
-          saveNameCache();
+          saveAllCache();
         }
       });
     } catch (e) { /* ignore */ }
   }
 
-  function saveNameCache() {
+  function saveAllCache() {
     try { localStorage.setItem('de_name_cache', JSON.stringify(studentNameCache)); } catch (e) { /* ignore */ }
+    try { localStorage.setItem('de_regid_cache', JSON.stringify(studentRegIdCache)); } catch (e) { /* ignore */ }
   }
 
   async function batchFetchNames(studentIds) {
-    var unknown = studentIds.filter(function (sid) { return !studentNameCache[String(sid)]; });
-    if (unknown.length === 0) return;
+    console.log('[批量录入] batchFetchNames 开始, studentIds数量:', studentIds.length);
 
+    var unknown = studentIds.filter(function (sid) {
+      return !studentNameCache[String(sid)] || !studentRegIdCache[String(sid)];
+    });
+    console.log('[批量录入] 需要拉取的学生数:', unknown.length, '(已有缓存:', studentIds.length - unknown.length, ')');
+    if (unknown.length === 0) {
+      console.log('[批量录入] 所有学生已有缓存，跳过拉取');
+      return;
+    }
+
+    var schoolYear = '', schoolTermIds = '';
+
+    // ===== 方法1：从页面已发出的 student/list 请求URL中直接提取参数 =====
+    // 最可靠的方式：页面加载时已经调用了 student/list，URL里带好了 schoolYear 和 schoolTermIds
     try {
-      var resp = await fetch(API_BASE + '/regularCourse/next/class/list', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ current: 1, size: 500 }),
-      });
-      if (resp.ok) {
-        var result = await resp.json();
-        var rows = (result.data && result.data.records) || [];
-        rows.forEach(function (row) {
-          var sid = String(row.studentId || '');
-          var name = row.studentName || row.nickName || '';
-          if (sid && name) studentNameCache[sid] = name;
-        });
-        saveNameCache();
+      var entries = performance.getEntriesByType('resource');
+      console.log('[批量录入] 方法1: performance entries 数量:', entries.length);
+      for (var i = entries.length - 1; i >= 0; i--) {
+        var entryName = entries[i].name;
+        if (entryName.indexOf('student/list') !== -1 && entryName.indexOf('schoolYear') !== -1) {
+          var url = new URL(entryName);
+          schoolYear = url.searchParams.get('schoolYear') || '';
+          schoolTermIds = url.searchParams.get('schoolTermIds') || '';
+          console.log('[批量录入] 方法1成功: schoolYear=' + schoolYear + ', schoolTermIds=' + schoolTermIds);
+          break;
+        }
       }
     } catch (e) {
-      console.warn('[批量录入] 批量拉取姓名失败:', e.message);
+      console.warn('[批量录入] 方法1异常:', e.message);
+    }
+
+    // ===== 方法2：从DOM读schoolYear + Vue store读schoolTermIds（备选） =====
+    if (!schoolYear || !schoolTermIds) {
+      console.log('[批量录入] 方法1未找到参数，尝试方法2 (DOM+Vue store)');
+      try {
+        var yearInput = document.querySelector('.el-input__inner[placeholder="请选择学年"]');
+        console.log('[批量录入] yearInput:', yearInput ? ('value=' + yearInput.value) : 'null');
+        if (yearInput) schoolYear = yearInput.value;
+
+        var tagEls = document.querySelectorAll('.el-tag--info');
+        var tagNames = [];
+        tagEls.forEach(function(t) { var n = t.textContent.trim(); if (n && n.length < 10) tagNames.push(n); });
+        console.log('[批量录入] tagNames:', tagNames);
+
+        var appEl = document.querySelector('#app');
+        console.log('[批量录入] #app元素:', appEl ? 'found' : 'null', '| __vue__:', appEl && appEl.__vue__ ? 'available' : 'unavailable');
+        if (appEl && appEl.__vue__ && appEl.__vue__.$store) {
+          var semesterList = appEl.__vue__.$store.state.dataConfig.dataDict.semester || [];
+          console.log('[批量录入] semesterList数量:', semesterList.length);
+          var termIds = [];
+          tagNames.forEach(function(name) {
+            var found = semesterList.find(function(s) { return s.name === name; });
+            if (found) {
+              termIds.push(found.id);
+              console.log('[批量录入] 学期匹配:', name, '->', found.id);
+            }
+          });
+          schoolTermIds = termIds.join(',');
+        } else {
+          console.warn('[批量录入] Vue store 不可访问（content script 隔离世界限制）');
+        }
+      } catch (e) {
+        console.warn('[批量录入] 方法2异常:', e.message);
+      }
+    }
+
+    if (!schoolYear || !schoolTermIds) {
+      console.error('[批量录入] 无法获取学年学期参数! schoolYear=' + schoolYear + ', schoolTermIds=' + schoolTermIds);
+      return;
+    }
+
+    console.log('[批量录入] 最终参数: schoolYear=' + schoolYear + ', schoolTermIds=' + schoolTermIds);
+
+    try {
+      var resp = await fetch(API_BASE + '/regularCourse/next/student/list?schoolYear=' + encodeURIComponent(schoolYear) + '&schoolTermIds=' + encodeURIComponent(schoolTermIds) + '&fieldType=intentionLevel');
+      console.log('[批量录入] student/list HTTP状态:', resp.status);
+      if (resp.ok) {
+        var result = await resp.json();
+        console.log('[批量录入] 返回code:', result.code);
+        var list = (result.data && result.data.studentList) || [];
+        console.log('[批量录入] 返回学生数:', list.length);
+        if (list.length > 0) {
+          console.log('[批量录入] 首条样本:', JSON.stringify({ id: list[0].id, studentId: list[0].studentId, userName: list[0].userName }));
+        }
+        list.forEach(function (row) {
+          var sid = String(row.studentId || '');
+          var name = row.userName || row.nickName || '';
+          var regId = row.id || '';
+          if (sid && name) studentNameCache[sid] = name;
+          if (sid && regId) studentRegIdCache[sid] = regId;
+        });
+        saveAllCache();
+        console.log('[批量录入] 缓存更新完毕, regIdCache大小:', Object.keys(studentRegIdCache).length);
+      } else {
+        console.warn('[批量录入] student/list HTTP错误:', resp.status, resp.statusText);
+      }
+    } catch (e) {
+      console.warn('[批量录入] 批量拉取学员数据失败:', e.message);
     }
   }
 

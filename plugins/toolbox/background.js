@@ -61,16 +61,23 @@
      * @returns {Promise<Object[]>} 模块清单数组
      */
     async getAll() {
-      // 尝试从缓存读取
-      const cached = await this._readCache();
-      // 如果缓存模块数 ≠ 已知模块数，说明扩展更新过，跳过缓存重新扫描
-      if (cached && cached.length === KNOWN_MODULES.length) {
-        // 合并 enabled 状态（存储中可能被用户修改过）
-        const enabledMap = await this._getEnabledMap();
-        return cached.map((mod) => ({
-          ...mod,
-          enabled: enabledMap[mod.name] !== false,
-        }));
+      const currentVersion = chrome.runtime.getManifest().version;
+
+      // 版本戳校验：缓存版本 === 当前版本才复用，否则跳过缓存重新扫描
+      const stamp = await this._readVersionStamp();
+      if (stamp === currentVersion) {
+        const cached = await this._readCache();
+        if (cached && cached.length > 0) {
+          const enabledMap = await this._getEnabledMap();
+          return cached.map((mod) => ({
+            ...mod,
+            enabled: enabledMap[mod.name] !== false,
+          }));
+        }
+      }
+
+      if (stamp && stamp !== currentVersion) {
+        console.log(`[壳SW] 模块缓存版本不匹配 (${stamp} → ${currentVersion})，重新扫描`);
       }
 
       // fetch 逐一加载 module.json
@@ -124,12 +131,29 @@
     },
 
     /**
+     * 读取缓存的版本戳
+     * @private
+     * @returns {Promise<string|null>}
+     */
+    async _readVersionStamp() {
+      try {
+        const result = await chrome.storage.local.get('shell.module_registry_version');
+        return result['shell.module_registry_version'] || null;
+      } catch {
+        return null;
+      }
+    },
+
+    /**
      * 写入 storage 缓存
      * @private
      */
     async _writeCache(modules) {
       try {
-        await chrome.storage.local.set({ 'shell.module_registry': modules });
+        await chrome.storage.local.set({
+          'shell.module_registry': modules,
+          'shell.module_registry_version': chrome.runtime.getManifest().version,
+        });
       } catch (e) {
         console.warn('[壳SW] 写入模块缓存失败:', e);
       }
@@ -166,7 +190,7 @@
      * 清除模块缓存（扩展更新时调用）
      */
     async clearCache() {
-      await chrome.storage.local.remove('shell.module_registry');
+      await chrome.storage.local.remove(['shell.module_registry', 'shell.module_registry_version']);
     },
   };
 

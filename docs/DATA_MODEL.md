@@ -1,147 +1,155 @@
 # 浏览器插件管理 — 数据模型
 
-## 一、扩展版本管理
+> 最后更新：2026-06-29
 
-### 1.1 manifest.json (plugins/toolbox/)
+---
 
-```json
+## 一、每日工作看板 — 排课数据
+
+### 来源：POST /regularCourse/next/class/list
+
+```javascript
 {
-  "manifest_version": 3,
-  "name": "插件工作箱",
-  "version": "2.2.50",
-  "update_url": "https://.../update.xml"
+  classId: string,           // 课次ID
+  periodId: string,          // 讲次ID
+  userId: string,            // 学员ID
+  userName: string,          // 学员姓名
+  courseName: string,        // 课程名称
+  startTime: string,         // 开始时间 "2026-07-26 14:00:00"
+  onlineStatus: number,      // 在线状态
+  inClassOnlineDuration: number, // 在线时长(秒?)
+  lessonOnlineStatus: string,    // 课堂在线状态
+  lessonDuration: number,        // 课堂时长
+  answerRate: number,            // 回答率
+  firstAnswerCorrectRate: number,// 首答正确率
+  unfocused: number,             // 不专注率(百分比)
+  studentRemark: string,         // 备注名
 }
 ```
 
-`version` 字段由 `node build.js` 自动递增（patch: 2.2.X → 2.2.X+1）。
+### 缓存策略
 
-### 1.2 versions.json
+| 层级 | 存储位置 | 生命周期 |
+|------|---------|---------|
+| 每日看板数据 | `sessionStorage` (`_nfDB.xxx`) | 同标签页 |
+| 学情绑定表 | `chrome.storage.local` (`shell.binding_data`) | 永久（跨标签页/跨会话） |
+| 扫描记录 | `sessionStorage` (`_nfMonitor.history[10]`) | 同标签页 |
+| 不专注率去重 | `chrome.storage.local` (`_nfMonitor.wecom_dedup`) | 24h |
 
-记录所有历史版本：
+---
 
-```json
-[
-  {
-    "version": "2.2.50",
-    "publishedAt": "2026-06-19T...",
-    "crx": "toolbox-v2.2.25.crx",
-    "zip": "toolbox-latest.zip",
-    "sha256": "..."
-  }
-]
+## 二、调课助手 — 排课数据模型
+
+### 用户输入模板（Tab 分隔）
+
+```
+学员ID	日期	时间	课程名	星期(可选)
+1239612	2026-07-26	14:00	数学暑假课	12345
+```
+
+### 解析后结构
+
+```javascript
+{
+  userId: string,          // 学员ID
+  date: string,            // 日期 YYYY-MM-DD
+  time: string,            // 时间 HH:MM
+  courseKeyword: string,   // 原始课程名 → 学科映射 + 学期提取
+  weekDays: number[],      // 星期数字数组 [1,2,3,4,5]
+  courseMapped: string,    // 映射后课程类型 "思维"
+  semester: string,        // 提取的学期关键词 "暑假"
+}
 ```
 
 ---
 
-## 二、模块配置
+## 三、插件工作箱 — 模块注册表
 
-### 2.1 module.json
+### KNOWN_MODULES（background.js）
 
-每个子模块目录下的声明文件：
+```javascript
+const KNOWN_MODULES = [
+  'report',      // 学习报告分析
+  'dingtalk',    // 页面表格提取
+  'tiaoke',      // 调课助手
+  'updater',     // 更新助手
+  'heatmap',     // 课程排期热力图
+  'dailyboard',  // 每日工作看板
+  'data-entry',  // 批量录入成绩
+];
+```
 
-```json
+### 缓存存储
+
+| 键 | 存储位置 | 说明 |
+|----|---------|------|
+| `shell.module_registry` | `chrome.storage.local` | 模块元数据列表 |
+| `shell.module_registry_version` | `chrome.storage.local` | 版本戳（v2.2.132+） |
+| `shell.enabled_modules` | `chrome.storage.local` | `{ moduleName: boolean }` |
+
+---
+
+## 四、学习报告 — 评价数据模型
+
+### 四维评价（P1→P4 优先级递减）
+
+```javascript
 {
-  "id": "report",
-  "name": "学习报告分析",
-  "tabLabel": "📊 报告",
-  "order": 1,
-  "files": {
-    "content": "modules/report/content.js",
-    "background": "modules/report/background.js"
-  }
+  mastery: { score, level },      // P1 掌握度
+  answerRate: { score, level },   // P2 回答率
+  listenDuration: { score, level },// P3 听课时长
+  homeworkRate: { score, level },  // P4 作业完成率
 }
 ```
 
-| 字段 | 说明 |
+### 5 档标签
+
+| 标签 | 条件 |
 |------|------|
-| `id` | 模块标识（全局唯一） |
-| `name` | 显示名称 |
-| `tabLabel` | 侧边栏 Tab 标签（含 emoji） |
-| `order` | Tab 排序权重（越小越靠前） |
-| `files.content` | content script 相对路径 |
-| `files.background` | service worker 相对路径 |
-
-### 2.2 已注册模块
-
-| ID | 名称 | order |
-|----|------|-------|
-| `report` | 学习报告分析 | 1 |
-| `dingtalk` | 页面表格提取 | 2 |
-| `tiaoke` | 调课助手 | 3 |
-| `dailyboard` | 每日工作看板 | 4 |
-| `heatmap` | 课程排期热力图 | 5 |
-| `updater` | 检查更新 | 6 |
+| ⭐优秀 | 四维全高 |
+| 👍认真 | 整体不错 |
+| ⚠️需关注 | 部分偏低 |
+| 🚨敷衍预警 | 多项低 |
+| ❌敷衍+未掌握 | 严重偏低 |
 
 ---
 
-## 三、Native Host 数据流
+## 五、CloudBase — teacher_daily_tasks
 
-### 3.1 更新检查流程
+### 文档结构
 
+```javascript
+{
+  _id: string,
+  date: string,              // "2026-07-26"
+  teacherName: string,
+  teacherSubject: string,
+  teacherGrade: string,
+  // --- 6项上传字段 ---
+  dayRates: {                // 当日两率
+    effectiveListenRate: number,
+    homeworkCompleteRate: number,
+  },
+  catSummary: {              // 分类统计
+    total: number,
+    cat1_noClass: number,
+    cat2_inClass: number,
+    cat3_noReport: number,
+    cat4_good: number,
+    cat5_normal: number,
+    cat6_followUp: number,
+    cat7_custom: number,
+  },
+  students: [{               // 学生明细
+    studentId: string,
+    studentName: string,
+    onlineStatus: number,
+    lessonDuration: number,
+    answerRate: number,
+    firstAnswerCorrectRate: number,
+    unfocused: number,
+    category: number,        // 1-7 分类
+  }],
+  uploadTime: string,
+}
 ```
-content.js                    background.js               toolbox-updater.exe        CloudBase
-    │                              │                              │                      │
-    ├─ CHECK_UPDATE ───────────────►                              │                      │
-    │                              ├─ connectNative ─────────────►                      │
-    │                              │                              ├─ ping ──────────────►│
-    │                              │                              │◄─ pong ──────────────│
-    │                              │                              ├─ check ─────────────►│
-    │                              │                              │◄─ version/dnldUrl ───│
-    │                              │◄─ 版本比较 ──────────────────│                      │
-    │◄─ {hasUpdate, downloadUrl} ──│                              │                      │
-```
-
-### 3.2 更新安装流程
-
-```
-content.js                    background.js               toolbox-updater.exe        CloudBase
-    │                              │                              │                      │
-    ├─ INSTALL_UPDATE ─────────────►                              │                      │
-    │                              ├─ connectNative ─────────────►                      │
-    │                              │                              ├─ download ZIP ──────►│
-    │                              │                              │◄─ ZIP binary ────────│
-    │                              │                              ├─ 读取 config.json    │
-    │                              │                              ├─ 解压到 toolbox_dir  │
-    │                              │                              │  (覆盖 manifest 等)  │
-    │                              │◄─ {success, action} ────────│                      │
-    │◄─ "安装成功" ────────────────│                              │                      │
-```
-
----
-
-## 四、文件清单（打包产物）
-
-### 4.1 toolbox-latest.zip 结构
-
-```
-toolbox-latest.zip
-├── install.bat                  # 首次安装脚本（GBK 编码）
-├── README.txt                   # 安装说明
-├── native-host/
-│   ├── toolbox-updater.exe      # PyInstaller 打包（8.4MB）
-│   └── com.toolbox.updater.json # NM 注册清单
-└── toolbox/                     # Chrome 扩展源码
-    ├── manifest.json            # MV3 清单
-    ├── background.js            # 消息中继 + NM 代理
-    ├── content.js               # 侧边栏 UI
-    ├── popup.html / popup.js    # 弹出窗口
-    ├── panel.css                # 样式
-    ├── icons/                   # 图标（5 个）
-    └── modules/                 # 6 个子模块
-        ├── report/              # 学习报告（6 个文件）
-        ├── dingtalk/            # 表格提取（3 个文件）
-        ├── tiaoke/              # 调课助手（5 个文件）
-        ├── dailyboard/          # 每日工作看板（4 个文件）
-        ├── heatmap/             # 课程排期热力图（3 个文件）
-        └── updater/             # 更新助手（4 个文件）
-```
-
-### 4.2 CloudBase 云端文件
-
-| 路径 | 说明 | 更新策略 |
-|------|------|---------|
-| `extensions/toolbox/update.json` | Native Host 用版本信息 | 每次 build 覆盖 |
-| `extensions/toolbox/update.xml` | Chrome 用自动更新 | 每次 build 覆盖 |
-| `extensions/toolbox/toolbox-latest.zip` | 安装包 | 每次 build 覆盖 |
-| `extensions/toolbox/toolbox-v*.crx` | 历史 .crx 包 | 追加 |
-| `extensions/toolbox/toolbox-v*-quark.zip` | 夸克浏览器版 | 追加 |

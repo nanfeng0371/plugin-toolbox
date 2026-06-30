@@ -1,164 +1,145 @@
-# 浏览器插件管理 — API 参考
+# 浏览器插件管理 — API 接口参考
 
-## 一、扩展内部消息协议 (MessageBus)
-
-工具箱壳扩展通过 `chrome.runtime.sendMessage` 实现模块间通信。
-
-### 1.1 模块注册
-
-```js
-// background.js 中注册
-self.__registerModuleHandlers('模块名', {
-  ACTION_NAME: async function(data, sender) {
-    // 返回 { success: true, data: ... }
-  }
-});
-```
-
-### 1.2 模块调用
-
-```js
-// content.js 中调用
-const resp = await sendMsg({
-  target: '模块名',
-  action: 'ACTION_NAME',
-  data: { ... }
-});
-// resp → { success: true, data: ... }
-```
-
-### 1.3 Report 模块专有接口（v5.3.0+）
-
-| Action | 方向 | 数据 | 返回 |
-|--------|------|------|------|
-| `FETCH_REPORTS_BATCH` | content → bg | `{items: [{reportToken, courseClassify, studyVersion, finalUrl}]}` | `{results: [{idx, data, error}]}` |
-| `GENERATE_TABLE_EXCEL` | content → bg | `{headers: [...], rows: [...], sheetName: "..."}` | `{base64: "..."}` |
-
-**FETCH_REPORTS_BATCH 详细说明**：
-- **功能**：SW 内 30 并发批量获取报告数据（替代 iframe 池方案）
-- **输入**：`items` 数组，每项包含 `reportToken`, `courseClassify`, `studyVersion`, `finalUrl`
-- **输出**：`results` 数组，每项包含 `idx`, `data`（报告数据）, `error`（错误信息）
-- **性能**：330 人从 16 分钟降到 25 秒（35 倍加速）
-
-**GENERATE_TABLE_EXCEL 详细说明**：
-- **功能**：SW 内生成 xlsx（复用 report 模块已加载的 xlsx 库）
-- **输入**：`headers`（表头数组）, `rows`（数据二维数组）, `sheetName`（工作表名）
-- **输出**：`base64`（xlsx 文件 base64 编码）
-- **用途**：dingtalk 模块调用，避免 content.js 动态加载 xlsx 库失败
-
-### 1.4 Updater 模块专有接口
-
-| Action | 方向 | 数据 | 返回 |
-|--------|------|------|------|
-| `CHECK_UPDATE` | content → bg | `{}` | `{currentVersion, latestVersion, hasUpdate, downloadUrl, releaseNotes}` |
-| `INSTALL_UPDATE` | content → bg | `{downloadUrl}` | `{message, action: "reload_extension"}` |
-| `PING` | content → bg | `{}` | `{status: "pong", host: "python"}` |
-| `PROGRESS` | bg → content | `{...}` | 安装进度推送（实时） |
+> 最后更新：2026-06-29
+> 适用平台：ai-genesis.yuaiweiwu.com（爱芯后台）
 
 ---
 
-## 二、Native Messaging 协议
+## 一、爱芯平台 API
 
-### 2.1 连接
+### 1.1 排课相关
 
-```js
-const port = chrome.runtime.connectNative('com.toolbox.updater');
-port.postMessage({ command: 'ping' });
-port.onMessage.addListener(resp => { ... });
-```
-
-### 2.2 消息格式
-
-```
-4 字节 LE 无符号整数 (消息体长度) + UTF-8 JSON 消息体
-```
-
-### 2.3 命令
-
-| 命令 | 请求 | 响应 |
+| 方法 | 路径 | 说明 |
 |------|------|------|
-| `ping` | `{command: "ping"}` | `{success: true, data: {status: "pong", host: "python"}}` |
-| `check` | `{command: "check"}` | `{success: true, data: {version, downloadUrl, releaseNotes, ...}}` |
-| `update` | `{command: "update", downloadUrl: "..."}` | `{success: true, data: {message, action: "reload_extension"}}` |
+| GET | `/prod-api/student-center-ai/ai/user/course/list?userId={id}&courseClassify=3` | 获取学员可选课程列表 |
+| GET | `/prod-api/student-center-ai/ai/classtime/one?userClassTimeId={id}` | 获取单节课次详情 |
+| GET | `/prod-api/student-center-ai/ai/classtime/template?courseId={id}` | 获取课程讲次模板 |
+| POST | `/prod-api/student-center-ai/regularCourse/next/class/list` | 获取讲次排课列表（不专注率用） |
+| POST | `/prod-api/student-center-ai/ai/book/cycle` | **排课/改约（同一个API）** |
 
-### 2.4 错误码
+#### POST book/cycle — 请求体
 
-| 错误 | 说明 |
+```json
+{
+  "userId": "1239612",
+  "courseId": "4628",
+  "aiCourseId": "1207",
+  "periodId": "58726",
+  "classHourCycles": [{
+    "classTimeStart": "2026-07-26 14:00:00",
+    "classTimeEnd": "2026-07-26 16:00:00",
+    "classHourOrder": 1,
+    "weeks": [1,2,3,4,5]
+  }]
+}
+```
+
+> **注意**：同一 userId+courseId+periodId 已存在 → 自动更新（改约）；不存在 → 新建（排课）。无需传 userClassTimeId。
+
+#### courseList 返回字段
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| `id` | string | 课程ID（courseId） |
+| `title` | string | 课程名称 |
+| `aiCourseId` | string | AI课程ID |
+| `bookStatus` | number | 0=未排过, 1=已排过 |
+| `courseClassify` | number | 课程分类（3=一对一互动课） |
+
+---
+
+### 1.2 课堂监控相关
+
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| POST | `/prod-api/student-center-ai/ai/teacher/classroom/list` | 获取当前课堂列表（每日看板用） |
+
+#### classroom/list 返回关键字段
+
+| 字段 | 说明 |
 |------|------|
-| `Native Host 未安装` | 未运行 install.bat 注册 |
-| `Native Host 响应超时` | 30 秒超时 |
-| `Native Host 异常退出` | 进程崩溃或未正常断开 |
-| `缺少 downloadUrl 参数` | update 命令未提供下载地址 |
-| `HTTP 416` | CDN 缓存冲突（已自动重试） |
+| `lessonOnlineStatus` | 课堂在线状态 |
+| `lessonDuration` | 课堂持续时长 |
+| `periodId` | 讲次ID |
+| `studentName` / `studentId` | 学生信息 |
+| `courseName` | 课程名称 |
 
 ---
 
-## 三、CloudBase 云端 API
+### 1.3 企微推送
 
-### 3.1 update.json
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| POST | `/prod-api/student-center-ai/common/teacher/wecom/send-self` | 推送消息到老师企微 |
 
-```
-GET https://renewal-calendar-7ff2rtj4f876144-1259283480.tcloudbaseapp.com/extensions/toolbox/update.json
-```
-
-响应：
-```json
-{
-  "version": "2.1.76",
-  "downloadUrl": "https://.../extensions/toolbox/toolbox-latest.zip",
-  "releaseNotes": "v2.1.76 更新",
-  "publishedAt": "2026-06-10T...",
-  "minVersion": "2.1.24"
-}
-```
-
-### 3.2 update.xml
-
-```
-GET https://renewal-calendar-7ff2rtj4f876144-1259283480.tcloudbaseapp.com/extensions/toolbox/update.xml
-```
-
-Chrome 标准自动更新 XML 格式（用于 `update_url` manifest 字段）。
-
-### 3.3 下载
-
-```
-GET https://renewal-calendar-7ff2rtj4f876144-1259283480.tcloudbaseapp.com/extensions/toolbox/toolbox-latest.zip
-```
-
-固定文件名，每次部署覆盖，无需版本号。
-
----
-
-## 四、Native Host 配置 (config.json)
-
-由 `install.bat` 首次运行时生成：
+#### 请求体
 
 ```json
 {
-  "toolbox_dir": "D:\\Claw\\测试6.5\\toolbox-latest\\toolbox",
-  "update_url": "https://.../extensions/toolbox/update.json",
-  "user_agent": "Toolbox-Updater/2.1",
-  "log_path": null
+  "content": "消息内容（支持\\n换行）"
 }
 ```
 
-| 字段 | 说明 | 写入时机 |
-|------|------|---------|
-| `toolbox_dir` | 工具箱扩展目录绝对路径 | install.bat |
-| `update_url` | 更新检查 URL | install.bat（内置默认值） |
-| `user_agent` | HTTP 请求 UA | 内置默认值 |
-| `log_path` | 日志文件路径（null=不记日志） | 可选 |
+#### 返回
+
+```json
+{ "code": "000000", "mesg": "处理成功" }
+```
+
+> **依赖**：老师已绑定企微 + 浏览器有有效爱芯 Cookie。
 
 ---
 
-## 五、注册表
+### 1.4 其他
 
-install.bat 写入的 Windows 注册表项：
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| GET | `/prod-api/student-center-ai/ai/schoolCalendar?year=2026` | 获取校历（判断日期合法性） |
+| POST | `/prod-api/student-center-ai/api/user/info` | 获取当前登录教师信息 |
+| GET | `/prod-api/student-center-ai/ai/schedule?userId={id}` | 获取学员课表 |
 
-```
-HKCU\Software\Google\Chrome\NativeMessagingHosts\com.toolbox.updater
-HKCU\Software\Microsoft\Edge\NativeMessagingHosts\com.toolbox.updater
-```
+---
 
-默认值指向 `native-host/com.toolbox.updater.json` 的绝对路径。
+## 二、调课助手 — 学科映射表
+
+| 用户输入 | 映射到课程类型 |
+|---------|--------------|
+| 数学 | 思维 |
+| 语文 | 人文 |
+| 英语 | 演说 |
+| 物理 | 科学 |
+| 化学 | 实验 |
+
+**学期关键词**：暑假、秋季、寒假、春季、期末、期中、冲刺
+
+**禁止词（自动过滤）**：全科、S班
+
+---
+
+## 三、CloudBase 相关
+
+| 用途 | 环境ID | 集合/路径 |
+|------|--------|---------|
+| 扩展托管 | `renewal-calendar-7ff2rtj4f876144` | `extensions/toolbox/` |
+| 每日看板数据 | 同上 | `teacher_daily_tasks` |
+
+### teacher_daily_tasks 集合
+
+| 索引字段 | 说明 |
+|---------|------|
+| `date` | 日期 |
+| `teacherName` | 教师姓名 |
+| `teacherSubject` | 学科 |
+| `teacherGrade` | 年级 |
+
+---
+
+## 四、学习报告 API（aitutor100）
+
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| GET | `queryCoursePeriodReport` | 课程报告汇总 |
+| GET | `queryComponentDialogueList` | 互动明细 |
+| GET | `summary` | 摘要信息 |
+
+> 通过短链 `s1.aiv5.cc/xxx` → 302 重定向获取 finalUrl，content.js 页面直连 fetch。
